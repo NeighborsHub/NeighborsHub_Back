@@ -41,7 +41,6 @@ class Follow(BaseModel):
                 f"created_at={self.created_at}, updated_at={self.updated_at})")
 
 
-
 class Address(BaseModel):
     user = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT)
     street = models.CharField(max_length=255, blank=True, null=True)
@@ -49,6 +48,6 @@ class Address(BaseModel):
     zip_code = models.CharField(max_length=10, blank=True, null=True)
     is_main_address = models.BooleanField(default=False)
     def __str__(self):
-        return (f"Follow(id={self.id}, status={self.state}, following_user_id={self.follower.id}, followed_user_id={self.following.id}, "
+        return (f"Address(id={self.id}, status={self.state}, user_id={self.user.id},  "
                 f"created_at={self.created_at}, updated_at={self.updated_at})")
 
