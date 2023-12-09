@@ -43,6 +43,7 @@ class Follow(BaseModel):
 
 
 class Address(BaseModel):
+    user = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT)
     street = models.CharField(max_length=255, blank=True, null=True)
     city = models.ForeignKey(City, blank=True, null=True, on_delete=models.PROTECT)
     zip_code = models.CharField(max_length=10, blank=True, null=True)
