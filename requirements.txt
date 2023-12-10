@@ -1,6 +1,8 @@
 asgiref==3.7.2
 Django==4.2.7
 django-filter==23.5
+django-modeltranslation==0.18.11
+django-taggit==5.0.1
 djangorestframework==3.14.0
 Markdown==3.5.1
 model-bakery==1.17.0

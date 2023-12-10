@@ -1,3 +1,9 @@
-from django.shortcuts import render
+from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin
+from rest_framework import generics
 
-# Create your views here.
+from users.serializers import UserRegistrationSerializer
+
+
+class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
+    singular_name = 'user'
+    serializer_class = UserRegistrationSerializer
