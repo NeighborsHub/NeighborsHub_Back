@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from model_bakery import baker
@@ -86,22 +88,35 @@ class RegisterUser(TestCase):
         self.assertIn('email', response_json)
 
     def test_registered_successfully(self):
-        response = self.client.post(
-            reverse('user_register'), data=USER_VALID_DATA, format='json')
-        response_json = response.json()
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response_json['status'], 'ok')
-        self.assertEqual(response_json['data']['user']['email'], USER_VALID_DATA['email'])
-        self.assertEqual(response_json['data']['user']['mobile'], USER_VALID_DATA['mobile'])
-        self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
-        self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
+        with patch('users.views.generate_email_token') as mock_create_token, \
+                patch('users.views.verify_custom_token') as mock_verify_token:
+            mock_create_token.return_value = 'MOCK_TOKEN'
+            response = self.client.post(
+                reverse('user_register'), data=USER_VALID_DATA, format='json')
+            print(f"generate_email_token called: {mock_create_token.called}")
 
-        created_user = get_user_model().objects.filter(
-            email=USER_VALID_DATA['email'],
-            mobile=USER_VALID_DATA['mobile'],
-            first_name=USER_VALID_DATA['first_name'],
-            last_name=USER_VALID_DATA['last_name'],
-            is_active=False,
-        ).first()
+            response_json = response.json()
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response_json['status'], 'ok')
+            self.assertEqual(response_json['data']['user']['email'], USER_VALID_DATA['email'])
+            self.assertEqual(response_json['data']['user']['mobile'], USER_VALID_DATA['mobile'])
+            self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
+            self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
 
-        self.assertIsNotNone(created_user)
+            created_user = get_user_model().objects.filter(
+                email=USER_VALID_DATA['email'],
+                mobile=USER_VALID_DATA['mobile'],
+                first_name=USER_VALID_DATA['first_name'],
+                last_name=USER_VALID_DATA['last_name'],
+                is_active=False,
+            ).first()
+            self.assertIsNotNone(created_user)
+            mock_verify_token.return_value = (False, {'payload': {"issued_for": 'Verify/Email',
+                                                                  "user_id": created_user.id,
+                                                                  "email": USER_VALID_DATA['email']}})
+
+            response = self.client.get(
+                reverse('user_verify_email', kwargs={'token': 'MOCK_TOKEN'}))
+            mock_verify_token.assert_called_once_with('MOCK_TOKEN')
+
+            print(response.json())

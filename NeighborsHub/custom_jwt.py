@@ -4,7 +4,7 @@ from django.conf import settings
 JWT_ALGORITHMS = 'HS256'
 
 
-def generate_email_token(issued_for, user_id, email, expired_at):
+def generate_email_token(issued_for, user_id, email, expired_at) -> str:
     payload = {
         'issued_for': issued_for,
         'user_id': user_id,
@@ -15,11 +15,14 @@ def generate_email_token(issued_for, user_id, email, expired_at):
     return token
 
 
-def verify_custom_token(token):
+def verify_custom_token(token: str) -> [bool, dict]:
+    """
+    response : has_error, result
+    """
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[JWT_ALGORITHMS])
-        return payload
+        return False, {"payload": payload}
     except jwt.ExpiredSignatureError:
-        return {'error': 'Token has expired.'}
+        return True, {'error': 'Token has expired.'}
     except jwt.InvalidTokenError:
-        return {'error': 'Invalid token.'}
+        return True, {'error': 'Invalid token.'}
