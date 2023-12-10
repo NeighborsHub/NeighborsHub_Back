@@ -16,7 +16,7 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     user_permissions = models.ManyToManyField(
         Permission,
         blank=True,
-        related_name='customuser_set',
+        related_name='customUser_set',
         related_query_name='user'
     )
     groups = models.ManyToManyField(Group, related_name='customer_users')
