@@ -5,12 +5,12 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Permi
 from core.models import BaseModel, City, States, Hashtag
 
 
-def validate_email(value):
+def validate_email(value: str) -> bool:
     email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return re.match(email_regex, value) is not None
 
 
-def validate_mobile(value):
+def validate_mobile(value: str) -> bool:
     mobile_regex = r"^[0-9]{7,}$"
     return re.match(mobile_regex, value) is not None
 
