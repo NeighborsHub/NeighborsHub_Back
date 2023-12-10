@@ -25,7 +25,7 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['first_name', 'last_name']
     state = models.ForeignKey(States, null=True, blank=True, on_delete=models.PROTECT)
     hashtags = models.ManyToManyField(Hashtag, null=True, blank=True)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
