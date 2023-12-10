@@ -11,7 +11,7 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     mobile = models.CharField(max_length=15, unique=True, blank=True, null=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
-    birth_date = models.DateField(null=True,blank=True)
+    birth_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     user_permissions = models.ManyToManyField(
         Permission,
@@ -33,12 +33,14 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
 
 
 class Follow(BaseModel):
-    follower = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT)
-    following = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT)
+    follower = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT, related_name='follower')
+    following = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT,
+                                  related_name='following')
 
     def __str__(self):
-        return (f"Follow(id={self.id}, status={self.state}, following_user_id={self.follower.id}, followed_user_id={self.following.id}, "
-                f"created_at={self.created_at}, updated_at={self.updated_at})")
+        return (
+            f"Follow(id={self.id}, status={self.state}, following_user_id={self.follower.id}, followed_user_id={self.following.id}, "
+            f"created_at={self.created_at}, updated_at={self.updated_at})")
 
 
 class Address(BaseModel):
@@ -47,7 +49,7 @@ class Address(BaseModel):
     city = models.ForeignKey(City, blank=True, null=True, on_delete=models.PROTECT)
     zip_code = models.CharField(max_length=10, blank=True, null=True)
     is_main_address = models.BooleanField(default=False)
+
     def __str__(self):
         return (f"Address(id={self.id}, status={self.state}, user_id={self.user.id},  "
                 f"created_at={self.created_at}, updated_at={self.updated_at})")
-

@@ -25,12 +25,12 @@ class Hashtag(models.Model):
 class BaseModel(models.Model):
     state = models.ForeignKey(States, null=True, blank=True, on_delete=models.PROTECT)
     hashtags = models.ManyToManyField(Hashtag, null=True, blank=True)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey("users.CustomerUser", null=True, blank=True, on_delete=models.PROTECT,
                                    related_name="created_by")
-    uploaded_by = models.ForeignKey("users.CustomerUser", null=True, blank=True, on_delete=models.PROTECT,
-                                    related_name="updated_by")
+    updated_by = models.ForeignKey("users.CustomerUser", null=True, blank=True, on_delete=models.PROTECT,
+                                   related_name="updated_by")
 
 
 class Country(models.Model):
