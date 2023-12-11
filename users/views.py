@@ -37,14 +37,32 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
         redis.create(user.mobile, otp)
         return None
 
+    @staticmethod
+    def create_jwt_authorization(user_id):
+        # create jwt
+        jwt = generate_auth_token(issued_for="Authorization", user_id=user_id)
+        # save token in redis
+        AuthenticationTokenRedis().create(jwt, user_id)
+        return jwt
+
     def perform_create(self, serializer):
         user = serializer.save()
         if user.email is not None:
             self.send_verification_email(user)
         if user.mobile is not None:
             self.send_verification_mobile(user)
-
+        # create jwt
         return user
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = self.perform_create(serializer)
+        response_data = {
+            'status': "ok",
+            'data': {"user": serializer.data, "access_token": f"Bearer {self.create_jwt_authorization(user.id)}"}
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class VerifyEmailAPI(APIView):

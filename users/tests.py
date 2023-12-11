@@ -107,6 +107,8 @@ class TestRegisterUser(TestCase):
             self.assertEqual(response_json['data']['user']['mobile'], USER_VALID_DATA['mobile'])
             self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
             self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
+            self.assertIn('access_token', response_json['data'])
+            self.assertIn('Bearer ', response_json['data']['access_token'])
 
             created_user = get_user_model().objects.filter(
                 email=USER_VALID_DATA['email'],
