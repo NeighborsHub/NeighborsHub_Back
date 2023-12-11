@@ -6,10 +6,12 @@ from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin
 from rest_framework import generics
 from django.utils.translation import gettext as _
 from NeighborsHub.mail import SendEmail
+from NeighborsHub.permission import CustomAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
+from NeighborsHub.sms import SendSMS
 from NeighborsHub.utils import create_mobile_otp
 from users.models import CustomerUser
-from users.serializers import UserRegistrationSerializer, LoginSerializer
+from users.serializers import UserRegistrationSerializer, LoginSerializer, VerifyMobileSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -35,6 +37,7 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
         otp = create_mobile_otp(length=5)
         redis = VerificationOTPRedis(issued_for='Verify/Mobile')
         redis.create(user.mobile, otp)
+        SendSMS().run(mobile=user.mobile, message=otp)
         return None
 
     @staticmethod
@@ -117,3 +120,70 @@ class LoginApi(APIView):
                                 status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerifyMobileApi(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def get_verification_redis_mobile_otp(user: CustomerUser) -> str:
+        redis = VerificationOTPRedis(issued_for='Verify/Mobile')
+        redis_otp = redis.get(user.mobile)
+        return redis_otp
+
+    def post(self, request):
+        serializer = VerifyMobileSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+            redis_otp = self.get_verification_redis_mobile_otp(user)
+            if redis_otp is None or redis_otp != serializer.validated_data['otp']:
+                return Response({"error": _("OTP is not valid")}, status=status.HTTP_400_BAD_REQUEST)
+            user.is_verified_mobile = True
+            user.verified_mobile_at = datetime.datetime.now()
+            user.save()
+            return Response(data={"status": "ok", "data": {}})
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResendVerifyEmailApi(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def get(request):
+        user = request.user
+        redis = VerificationEmailRedis(issued_for='Verify/Email')
+        redis.revoke(user.email)
+        token = generate_email_token('Verify/Email', user.id,
+                                     user.email,
+                                     expired_at=datetime.datetime.now() + datetime.timedelta(days=1))
+        redis.create(user.email, token)
+        mail_sender = SendEmail()
+        mail_sender.run(mail_destination=user.email, title=_('Verify Email'), body=token)
+        return Response(data={"status": "ok", "data": {}})
+
+
+class ResendVerifyMobileApi(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def get(request):
+        user = request.user
+        otp = create_mobile_otp(length=5)
+        redis_manager = VerificationOTPRedis(issued_for='Verify/Mobile')
+        redis_manager.revoke(user.mobile)
+        redis_manager.create(user.mobile, otp)
+        SendSMS().run(mobile=user.mobile, message=otp)
+        return Response(data={"status": "ok", "data": {}})
+
+
+class LogoutApi(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def get(request):
+        redis_manager = AuthenticationTokenRedis()
+        token = request.META.get('HTTP_Authorization')
+        token = token.split()[1]
+        redis_manager.revoke(token)
+        return Response(data={"status": "ok", "data": {}})

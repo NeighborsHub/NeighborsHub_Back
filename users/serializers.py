@@ -3,7 +3,7 @@ from django.utils.translation import gettext as _
 from django.contrib.auth import get_user_model
 
 from users.models import validate_email, validate_mobile
-
+import re
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     mobile = serializers.CharField(required=False)
@@ -68,9 +68,24 @@ class LoginSerializer(serializers.ModelSerializer):
         if validate_email(value):
             return value
         if validate_mobile(value):
-            return
+            return value
         raise serializers.ValidationError(_('Invalid email/mobile format'))
 
     class Meta:
         model = get_user_model()
         fields = ['email_mobile', 'password']
+
+
+class VerifyMobileSerializer(serializers.ModelSerializer):
+    otp = serializers.CharField(required=True, write_only=True)
+
+    @staticmethod
+    def validate_otp(value):
+        mobile_regex = r"^[0-9]{5,}$"
+        if re.match(mobile_regex, value) is not None:
+            return value
+        raise serializers.ValidationError(_('Invalid OTP format'))
+
+    class Meta:
+        model = get_user_model()
+        fields = ['otp', ]
