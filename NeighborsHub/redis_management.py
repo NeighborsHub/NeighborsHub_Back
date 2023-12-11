@@ -22,3 +22,9 @@ class VerificationOTPRedis(VerificationEmailRedis):
     def __init__(self, issued_for: str):
         super().__init__(issued_for)
         self.expire_time = 5 * 60
+
+
+class AuthenticationTokenRedis(VerificationEmailRedis):
+    def __init__(self):
+        super().__init__(issued_for="Authorization")
+        self.expire_time = settings.JWT_AUTH_TIME_DELTA * 24 * 3600

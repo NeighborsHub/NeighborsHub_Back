@@ -6,7 +6,7 @@ from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin
 from rest_framework import generics
 from django.utils.translation import gettext as _
 from NeighborsHub.mail import SendEmail
-from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis
+from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from NeighborsHub.utils import create_mobile_otp
 from users.models import CustomerUser
 from users.serializers import UserRegistrationSerializer, LoginSerializer
@@ -87,8 +87,13 @@ class LoginApi(APIView):
                 if not user.check_password(serializer.validated_data['password']):
                     return Response({"error": _("Email/Mobile or password is incorrect")},
                                     status=status.HTTP_400_BAD_REQUEST)
-                jwt = generate_auth_token(issued_for="Authentication", user_id=user.id)
-                return Response(data={"status": "ok", "data": {"token": jwt}})
+                # create jwt
+                jwt = generate_auth_token(issued_for="Authorization", user_id=user.id)
+
+                # save token in redis
+                AuthenticationTokenRedis().create(jwt, user.id)
+
+                return Response(data={"status": "ok", "data": {"access_token": f"Bearer {jwt}"}})
             except CustomerUser.DoesNotExist:
                 return Response({"error": _("Email/Mobile or password is incorrect")},
                                 status=status.HTTP_400_BAD_REQUEST)
