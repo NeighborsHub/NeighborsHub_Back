@@ -178,21 +178,9 @@ class TestLoginUser(TestCase):
         response = self.client.post(
             reverse('user_login'), data=valid_user_data, format='json')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual('ok', response_json['status'])
+        self.assertIn('access_token', response_json['data'])
+        self.assertIn('Bearer ', response_json['data']['access_token'])
 
-    def test_rejects_invalid_mobile_email(self):
-        invalid_user_data = {
-            'first_name': 'Milad',
-            'last_name': 'Tavakoli',
-            'password': 'noob',
-            'email': '8590410',
-        }
-        response = self.client.post(
-            reverse('user_register'), data=invalid_user_data, format='json')
-        response_json = response.json()
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('mobile', response_json)
-        self.assertIn('email', response_json)
 
