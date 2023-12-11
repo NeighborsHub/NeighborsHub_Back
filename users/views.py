@@ -1,7 +1,7 @@
 import datetime
 from rest_framework import status
 
-from NeighborsHub.custom_jwt import generate_email_token, verify_custom_token
+from NeighborsHub.custom_jwt import generate_email_token, verify_custom_token, generate_auth_token
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin
 from rest_framework import generics
 from django.utils.translation import gettext as _
@@ -9,7 +9,7 @@ from NeighborsHub.mail import SendEmail
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis
 from NeighborsHub.utils import create_mobile_otp
 from users.models import CustomerUser
-from users.serializers import UserRegistrationSerializer
+from users.serializers import UserRegistrationSerializer, LoginSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -32,7 +32,7 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
 
     @staticmethod
     def send_verification_mobile(user: CustomerUser) -> None:
-        otp = create_mobile_otp(5)
+        otp = create_mobile_otp(length=5)
         redis = VerificationOTPRedis(issued_for='Verify/Mobile')
         redis.create(user.mobile, otp)
         return None
@@ -75,3 +75,22 @@ class VerifyEmailAPI(APIView):
         return Response({'status': 'ok'})
 
 
+class LoginApi(APIView):
+    @staticmethod
+    def post(request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = get_user_model().objects.get_user_with_mobile_or_mail(
+                    user_field=serializer.validated_data['email_mobile']
+                )
+                if not user.check_password(serializer.validated_data['password']):
+                    return Response({"error": _("Email/Mobile or password is incorrect")},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                jwt = generate_auth_token(issued_for="Authentication", user_id=user.id)
+                return Response(data={"status": "ok", "data": {"token": jwt}})
+            except CustomerUser.DoesNotExist:
+                return Response({"error": _("Email/Mobile or password is incorrect")},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

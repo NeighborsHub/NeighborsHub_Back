@@ -56,5 +56,21 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         user.set_password(validated_data['password'])
         user.save()
-        # TODO: CREATE Validation AND Send to User
         return user
+
+
+class LoginSerializer(serializers.ModelSerializer):
+    email_mobile = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True)
+
+    @staticmethod
+    def validate_email_mobile(value):
+        if validate_email(value):
+            return value
+        if validate_mobile(value):
+            return
+        raise serializers.ValidationError(_('Invalid email/mobile format'))
+
+    class Meta:
+        model = get_user_model()
+        fields = ['email_mobile', 'password']

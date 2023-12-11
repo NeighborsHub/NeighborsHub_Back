@@ -129,3 +129,5 @@ REDIS_ENGINE = {
     'host': '127.0.0.1',
     'port': 6379
 }
+
+JWT_AUTH_TIME_DELTA = 30  # days

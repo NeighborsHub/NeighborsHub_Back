@@ -2,6 +2,8 @@ import re
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Permission
+from django.db.models import Q
+
 from core.models import BaseModel, City, States, Hashtag
 
 
@@ -13,6 +15,11 @@ def validate_email(value: str) -> bool:
 def validate_mobile(value: str) -> bool:
     mobile_regex = r"^[0-9]{7,}$"
     return re.match(mobile_regex, value) is not None
+
+
+class CustomUserManager(models.Manager):
+    def get_user_with_mobile_or_mail(self, user_field):
+        return self.get(Q(email=user_field) | Q(mobile=user_field))
 
 
 class CustomerUser(AbstractBaseUser, PermissionsMixin):
@@ -41,6 +48,7 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     verified_email_at = models.DateTimeField(blank=True, null=True)
     verified_mobile_at = models.DateTimeField(blank=True, null=True)
+    objects = CustomUserManager()
 
     def __str__(self):
         return self.username

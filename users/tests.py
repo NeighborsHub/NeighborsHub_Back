@@ -15,10 +15,15 @@ USER_VALID_DATA = {
     'email': 'mldtavakkoli@gmail.com',
     'first_name': 'Milad',
     'last_name': 'Tavakoli',
-    'password': 'NeighborsHub',
-    'birth_date': '25-02-1994'
-
+    'password': 'n00b',
 }
+
+
+def _create_user():
+    user = get_user_model().objects.create(**USER_VALID_DATA)
+    user.set_password(USER_VALID_DATA['password'])
+    user.save()
+    return user
 
 
 class TestUserModel(TestCase):
@@ -40,7 +45,7 @@ class TestUserModel(TestCase):
         self.assertIsNotNone(test_obj)
 
 
-class RegisterUser(TestCase):
+class TestRegisterUser(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
 
@@ -118,5 +123,76 @@ class RegisterUser(TestCase):
             response = self.client.get(
                 reverse('user_verify_email', kwargs={'token': 'MOCK_TOKEN'}))
             mock_verify_token.assert_called_once_with('MOCK_TOKEN')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response_json['status'], 'ok')
 
-            print(response.json())
+
+class TestLoginUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_url_exists(self):
+        response = self.client.post(
+            reverse('user_login'), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rejects_empty_data(self):
+        invalid_user_data = {
+        }
+        response = self.client.post(
+            reverse('user_login'), data=invalid_user_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password', response_json)
+
+    def test_rejects_invalid_email(self):
+        invalid_user_data = {
+            "email_mobile": "8590410@gmail.com",
+            "password": "123456"
+        }
+        response = self.client.post(
+            reverse('user_login'), data=invalid_user_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json)
+        self.assertIn('Email/Mobile or password is incorrect', response_json['error'])
+
+    def test_rejects_invalid_password(self):
+        invalid_user_data = {
+            "email_mobile": "mldtavakkoli@gmail.com",
+            "password": "123456"
+        }
+        response = self.client.post(
+            reverse('user_login'), data=invalid_user_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json)
+        self.assertIn('Email/Mobile or password is incorrect', response_json['error'])
+
+    def test_successfully_login(self):
+        valid_user_data = {
+            "email_mobile": self.user.email,
+            "password": USER_VALID_DATA['password']
+        }
+        response = self.client.post(
+            reverse('user_login'), data=valid_user_data, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+
+    def test_rejects_invalid_mobile_email(self):
+        invalid_user_data = {
+            'first_name': 'Milad',
+            'last_name': 'Tavakoli',
+            'password': 'noob',
+            'email': '8590410',
+        }
+        response = self.client.post(
+            reverse('user_register'), data=invalid_user_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('mobile', response_json)
+        self.assertIn('email', response_json)
+
