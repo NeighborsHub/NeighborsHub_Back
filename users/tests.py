@@ -234,7 +234,7 @@ class TestResendVerifyMobileUser(TestCase):
 
     def test_resend_and_verify_mobile(self):
         MOCK_OTP = 123456
-        with patch('users.views.create_mobile_otp') as create_mobile_otp:
+        with patch('users.utils.create_mobile_otp') as create_mobile_otp:
             create_mobile_otp.return_value = MOCK_OTP
             self.client.force_authenticate(self.user)
             response = self.client.get(
@@ -302,3 +302,35 @@ class TestLogoutUser(TestCase):
         response = self.client.get(
             reverse('user_logout'), data={}, format='json')
         self.assertTrue(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class TestSendOtpLoginUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_rejects_not_authenticated_user(self):
+        response = self.client.post(
+            reverse('user_send_otp_login'), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rejects_empty_data(self):
+        invalid_data = {
+            'mobile': "09358590410"
+        }
+        response = self.client.post(
+            reverse('user_send_otp_login'), data=invalid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json)
+
+    def test_successful_send_otp_login(self):
+        valid_data = {
+            'mobile': USER_VALID_DATA['mobile']
+        }
+        response = self.client.post(
+            reverse('user_send_otp_login'), data=valid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('status', response_json)
+        self.assertEqual('ok', response_json['status'])

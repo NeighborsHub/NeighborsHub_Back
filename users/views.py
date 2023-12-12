@@ -1,20 +1,20 @@
 import datetime
 from rest_framework import status
 
-from NeighborsHub.custom_jwt import generate_email_token, verify_custom_token, generate_auth_token
+from NeighborsHub.custom_jwt import verify_custom_token, generate_auth_token
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin
 from rest_framework import generics
 from django.utils.translation import gettext as _
-from NeighborsHub.mail import SendEmail
 from NeighborsHub.permission import CustomAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
-from NeighborsHub.sms import SendSMS
-from NeighborsHub.utils import create_mobile_otp
 from users.models import CustomerUser
-from users.serializers import UserRegistrationSerializer, LoginSerializer, VerifyMobileSerializer
+from users.serializers import UserRegistrationSerializer, LoginSerializer, VerifyMobileSerializer, \
+    SendLoginOtpSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+
+from users.utils import send_otp_mobile, send_token_email
 
 
 class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
@@ -22,22 +22,13 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
 
     @staticmethod
-    def send_verification_email(user: CustomerUser) -> None:
-        token = generate_email_token('Verify/Email', user.id,
-                                     user.email,
-                                     expired_at=datetime.datetime.now() + datetime.timedelta(days=1))
-        redis = VerificationEmailRedis(issued_for='Verify/Email')
-        redis.create(user.email, token)
-        mail_sender = SendEmail()
-        mail_sender.run(mail_destination=user.email, title=_('Verify Email'), body=token)
+    def send_verify_email(user: CustomerUser) -> None:
+        send_token_email(user, 'Verify/Email')
         return None
 
     @staticmethod
     def send_verification_mobile(user: CustomerUser) -> None:
-        otp = create_mobile_otp(length=5)
-        redis = VerificationOTPRedis(issued_for='Verify/Mobile')
-        redis.create(user.mobile, otp)
-        SendSMS().run(mobile=user.mobile, message=otp)
+        send_otp_mobile(user.mobile, issued_for="Verify/Mobile")
         return None
 
     @staticmethod
@@ -51,7 +42,7 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         if user.email is not None:
-            self.send_verification_email(user)
+            self.send_token_email(user)
         if user.mobile is not None:
             self.send_verification_mobile(user)
         # create jwt
@@ -122,6 +113,25 @@ class LoginApi(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SendOtpLoginApi(APIView):
+
+    @staticmethod
+    def post(request):
+        serializer = SendLoginOtpSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = get_user_model().objects.get(
+                    mobile=serializer.validated_data['mobile']
+                )
+                send_otp_mobile(user.mobile, issued_for='OTP/Login')
+                return Response(data={"status": "ok", "data": {}})
+            except CustomerUser.DoesNotExist:
+                return Response({"error": _("User does not exist")},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class VerifyMobileApi(APIView):
     authentication_classes = (CustomAuthentication,)
 
@@ -154,14 +164,7 @@ class ResendVerifyEmailApi(APIView):
     @staticmethod
     def get(request):
         user = request.user
-        redis = VerificationEmailRedis(issued_for='Verify/Email')
-        redis.revoke(user.email)
-        token = generate_email_token('Verify/Email', user.id,
-                                     user.email,
-                                     expired_at=datetime.datetime.now() + datetime.timedelta(days=1))
-        redis.create(user.email, token)
-        mail_sender = SendEmail()
-        mail_sender.run(mail_destination=user.email, title=_('Verify Email'), body=token)
+        send_token_email(user, 'Verify/Email')
         return Response(data={"status": "ok", "data": {}})
 
 
@@ -171,11 +174,7 @@ class ResendVerifyMobileApi(APIView):
     @staticmethod
     def get(request):
         user = request.user
-        otp = create_mobile_otp(length=5)
-        redis_manager = VerificationOTPRedis(issued_for='Verify/Mobile')
-        redis_manager.revoke(user.mobile)
-        redis_manager.create(user.mobile, otp)
-        SendSMS().run(mobile=user.mobile, message=otp)
+        send_otp_mobile(user.mobile, issued_for='Verify/Mobile')
         return Response(data={"status": "ok", "data": {}})
 
 
