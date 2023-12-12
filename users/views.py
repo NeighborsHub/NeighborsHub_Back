@@ -9,7 +9,7 @@ from NeighborsHub.permission import CustomAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from users.models import CustomerUser
 from users.serializers import UserRegistrationSerializer, LoginSerializer, VerifyMobileSerializer, \
-    SendLoginOtpSerializer
+    SendLoginOtpSerializer, VerifyOtpLoginSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -42,7 +42,7 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         if user.email is not None:
-            self.send_token_email(user)
+            self.send_verify_email(user)
         if user.mobile is not None:
             self.send_verification_mobile(user)
         # create jwt
@@ -129,6 +129,37 @@ class SendOtpLoginApi(APIView):
                 return Response({"error": _("User does not exist")},
                                 status=status.HTTP_400_BAD_REQUEST)
 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerifyOtpLoginApi(APIView):
+    @staticmethod
+    def get_verification_redis_mobile_otp(user: CustomerUser) -> str:
+        redis = VerificationOTPRedis(issued_for='OTP/Login')
+        redis_otp = redis.get(user.mobile)
+        if isinstance(redis_otp, bytes):
+            redis_otp = redis_otp.decode('utf-8')
+        return redis_otp
+
+    def post(self, request):
+        serializer = VerifyOtpLoginSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = get_user_model().objects.get(
+                    mobile=serializer.validated_data['mobile']
+                )
+                redis_otp = self.get_verification_redis_mobile_otp(user)
+                if redis_otp is None or redis_otp != serializer.validated_data['otp']:
+                    return Response({"error": _("OTP is not valid")}, status=status.HTTP_400_BAD_REQUEST)
+                jwt = generate_auth_token(issued_for="Authorization", user_id=user.id)
+
+                # save token in redis
+                AuthenticationTokenRedis().create(jwt, user.id)
+
+                return Response(data={"status": "ok", "data": {"access_token": f"Bearer {jwt}"}})
+            except CustomerUser.DoesNotExist:
+                return Response({"error": _("User does not exist")},
+                                status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

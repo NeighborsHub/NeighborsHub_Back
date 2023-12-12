@@ -103,3 +103,9 @@ class VerifyMobileSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['otp', ]
+
+
+class VerifyOtpLoginSerializer(VerifyMobileSerializer, SendLoginOtpSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ['otp', 'mobile', ]
