@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from users.models import validate_email, validate_mobile
 import re
 
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     mobile = serializers.CharField(required=False)
     email = serializers.CharField(required=False)
@@ -32,7 +33,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(_('Invalid email format'))
             if get_user_model().objects.filter(email=value).exists():
                 raise serializers.ValidationError(_('Email is existed.'))
-        return value
+        return value.lower() if value is not None else value
 
     @staticmethod
     def validate_mobile(value):
@@ -109,3 +110,35 @@ class VerifyOtpLoginSerializer(VerifyMobileSerializer, SendLoginOtpSerializer):
     class Meta:
         model = get_user_model()
         fields = ['otp', 'mobile', ]
+
+
+class SendForgetPasswordSerializer(serializers.ModelSerializer):
+    email_mobile = serializers.CharField(required=True, write_only=True)
+
+    @staticmethod
+    def validate_email_mobile(value):
+        if validate_email(value):
+            return value.lower()
+        if validate_mobile(value):
+            return value
+        raise serializers.ValidationError(_('Invalid email/mobile format'))
+
+    class Meta:
+        model = get_user_model()
+        fields = ['email_mobile', ]
+
+
+class VerifyEmailForgetPasswordSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(required=True, write_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = ['password', ]
+
+
+class VerifyOtpForgetPasswordSerializer(VerifyMobileSerializer,
+                                        SendLoginOtpSerializer,
+                                        VerifyEmailForgetPasswordSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ['otp', 'mobile', 'password']

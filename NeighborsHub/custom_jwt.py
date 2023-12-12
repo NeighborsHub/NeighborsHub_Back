@@ -3,6 +3,8 @@ import datetime
 import jwt
 from django.conf import settings
 
+from NeighborsHub.exceptions import TokenIsNotValidAPIException, TokenExpiredAPIException
+
 JWT_ALGORITHMS = 'HS256'
 
 
@@ -35,6 +37,7 @@ def verify_custom_token(token: str) -> [bool, dict]:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[JWT_ALGORITHMS])
         return False, {"payload": payload}
     except jwt.ExpiredSignatureError:
-        return True, {'error': 'Token has expired.'}
+        raise TokenIsNotValidAPIException
     except jwt.InvalidTokenError:
-        return True, {'error': 'Invalid token.'}
+        raise TokenExpiredAPIException
+

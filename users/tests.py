@@ -16,6 +16,9 @@ USER_VALID_DATA = {
     'first_name': 'Milad',
     'last_name': 'Tavakoli',
     'password': 'n00b',
+    'is_verified_mobile': False,
+    'is_verified_email': False,
+
 }
 
 

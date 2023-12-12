@@ -5,11 +5,14 @@ from NeighborsHub.custom_jwt import verify_custom_token, generate_auth_token
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin
 from rest_framework import generics
 from django.utils.translation import gettext as _
+
+from NeighborsHub.exceptions import TokenIsNotValidAPIException
 from NeighborsHub.permission import CustomAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from users.models import CustomerUser
 from users.serializers import UserRegistrationSerializer, LoginSerializer, VerifyMobileSerializer, \
-    SendLoginOtpSerializer, VerifyOtpLoginSerializer
+    SendLoginOtpSerializer, VerifyOtpLoginSerializer, SendForgetPasswordSerializer, VerifyOtpForgetPasswordSerializer, \
+    VerifyEmailForgetPasswordSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -68,18 +71,13 @@ class VerifyEmailAPI(APIView):
 
     def get(self, request, token):
         has_error, token_payload = verify_custom_token(token)
-        if has_error:
-            return Response(token_payload, status=status.HTTP_400_BAD_REQUEST)
         try:
             user = get_user_model().objects.get(id=token_payload['payload']['user_id'])
         except CustomerUser.DoesNotExist:
-            return Response({"error": _("Token is not Valid.")}, status=status.HTTP_400_BAD_REQUEST)
+            raise TokenIsNotValidAPIException
 
-        if user.email != token_payload['payload']['email']:
-            return Response({"error": _("Token is not Valid.")}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not self._is_exist_token_in_redis(user.email):
-            return Response({"error": _("Token is not Valid.")}, status=status.HTTP_400_BAD_REQUEST)
+        if user.email != token_payload['payload']['email'] or not self._is_exist_token_in_redis(user.email):
+            raise TokenIsNotValidAPIException
 
         user.is_verified_email = True
         user.verified_email_at = datetime.datetime.now()
@@ -195,8 +193,10 @@ class ResendVerifyEmailApi(APIView):
     @staticmethod
     def get(request):
         user = request.user
-        send_token_email(user, 'Verify/Email')
-        return Response(data={"status": "ok", "data": {}})
+        if not user.is_verified_email:
+            send_token_email(user, 'Verify/Email')
+            return Response(data={"status": "ok", "data": {}})
+        return Response(data={"error": _('Email activated before')}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ResendVerifyMobileApi(APIView):
@@ -205,8 +205,10 @@ class ResendVerifyMobileApi(APIView):
     @staticmethod
     def get(request):
         user = request.user
-        send_otp_mobile(user.mobile, issued_for='Verify/Mobile')
-        return Response(data={"status": "ok", "data": {}})
+        if not user.is_verified_mobile:
+            send_otp_mobile(user.mobile, issued_for='Verify/Mobile')
+            return Response(data={"status": "ok", "data": {}})
+        return Response(data={"error": _('Mobile activated before')}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LogoutApi(APIView):
@@ -219,3 +221,93 @@ class LogoutApi(APIView):
         token = token.split()[1]
         redis_manager.revoke(token)
         return Response(data={"status": "ok", "data": {}})
+
+
+class SendForgetPasswordApi(APIView):
+
+    @staticmethod
+    def get_verification_redis_mobile_otp(user: CustomerUser) -> str:
+        redis = VerificationOTPRedis(issued_for='Verify/Mobile')
+        redis_otp = redis.get(user.mobile)
+        if isinstance(redis_otp, bytes):
+            redis_otp = redis_otp.decode('utf-8')
+        return redis_otp
+
+    def post(self, request):
+        serializer = SendForgetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = get_user_model().objects.get_user_with_mobile_or_mail(
+                    user_field=serializer.validated_data['email_mobile']
+                )
+                if serializer.validated_data['email_mobile'] == user.email:
+                    send_token_email(user, issued_for="ForgetPassword/Email")
+                    return Response(data={"status": "ok", "data": _("Email Sent")})
+
+                send_otp_mobile(mobile=user.mobile, issued_for="ForgetPassword/OTP")
+                return Response(data={"status": "ok", "data": _("OTP Sent")})
+            except CustomerUser.DoesNotExist:
+                return Response({"error": _("User does not exist")},
+                                status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerifyOtpForgetPasswordApi(APIView):
+    @staticmethod
+    def get_verification_redis_mobile_otp(user: CustomerUser) -> str:
+        redis = VerificationOTPRedis(issued_for='ForgetPassword/OTP')
+        redis_otp = redis.get(user.mobile)
+        if isinstance(redis_otp, bytes):
+            redis_otp = redis_otp.decode('utf-8')
+        return redis_otp
+
+    def post(self, request):
+        serializer = VerifyOtpForgetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = get_user_model().objects.get(mobile=serializer.validated_data['mobile'])
+                redis_otp = self.get_verification_redis_mobile_otp(user)
+                if redis_otp is None or redis_otp != serializer.validated_data['otp']:
+                    return Response({"error": _("OTP is not valid")}, status=status.HTTP_400_BAD_REQUEST)
+                user.set_password(serializer.validated_data['password'])
+                user.save()
+                return Response(data={"status": "ok", "data": _('Password Changed')})
+            except CustomerUser.DoesNotExist:
+                return Response({"error": _("User does not exist")},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerifyEmailForgetPasswordAPI(APIView):
+    @staticmethod
+    def _is_exist_token_in_redis(email):
+        redis_res = VerificationEmailRedis(issued_for='ForgetPassword/Email')
+        return redis_res.get(keyword=email) is not None
+
+    def check_token(self, token):
+        has_error, token_payload = verify_custom_token(token)
+        try:
+            user = get_user_model().objects.get(id=token_payload['payload']['user_id'])
+        except CustomerUser.DoesNotExist:
+            raise TokenIsNotValidAPIException
+        if user.email != token_payload['payload']['email'] or not self._is_exist_token_in_redis(user.email):
+            raise TokenIsNotValidAPIException
+        return user
+
+    def get(self, request, token):
+        user = self.check_token(token)
+        user_data = {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+        }
+        return Response({'status': 'ok', 'data': {"user": user_data}})
+
+    def post(self, request, token):
+        user = self.check_token(token)
+        serializer = VerifyEmailForgetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user.set_password(serializer.validated_data['password'])
+            user.save()
+            return Response(data={"status": "ok", "data": _('Password Changed')})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
