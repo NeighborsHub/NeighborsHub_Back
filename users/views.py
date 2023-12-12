@@ -129,6 +129,8 @@ class VerifyMobileApi(APIView):
     def get_verification_redis_mobile_otp(user: CustomerUser) -> str:
         redis = VerificationOTPRedis(issued_for='Verify/Mobile')
         redis_otp = redis.get(user.mobile)
+        if isinstance(redis_otp, bytes):
+            redis_otp = redis_otp.decode('utf-8')
         return redis_otp
 
     def post(self, request):
