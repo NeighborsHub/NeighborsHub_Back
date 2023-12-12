@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Permission
 from django.db.models import Q
+from django.contrib.auth.models import BaseUserManager
 
 from core.models import BaseModel, City, States, Hashtag
 
@@ -17,7 +18,7 @@ def validate_mobile(value: str) -> bool:
     return re.match(mobile_regex, value) is not None
 
 
-class CustomUserManager(models.Manager):
+class CustomUserManager(BaseUserManager):
     def get_user_with_mobile_or_mail(self, user_field):
         return self.get(Q(email=user_field) | Q(mobile=user_field))
 

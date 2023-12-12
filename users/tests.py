@@ -200,7 +200,7 @@ class TestVerifyMobileUser(TestCase):
         invalid_user_data = {
             "otp": "123456"
         }
-        self.client.force_authenticate(self.user )
+        self.client.force_authenticate(self.user)
         response = self.client.post(
             reverse('user_verify_mobile'), data=invalid_user_data, format='json')
         response_json = response.json()
@@ -260,7 +260,7 @@ class TestResendVerifyEmailUser(TestCase):
             reverse('user_resend_verify_email'), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_successful_resend_otp_verify(self):
+    def test_successful_resend_email_verify(self):
         self.client.force_authenticate(self.user)
         response = self.client.get(
             reverse('user_resend_verify_email'), data={}, format='json')
@@ -269,7 +269,7 @@ class TestResendVerifyEmailUser(TestCase):
         self.assertIn('status', response_json)
         self.assertEqual('ok', response_json['status'])
 
-    def test_resend_and_verify_mobile(self):
+    def test_resend_and_verify_email(self):
         with patch('users.views.generate_email_token') as mock_create_token, \
                 patch('users.views.verify_custom_token') as mock_verify_token:
             mock_create_token.return_value = 'MOCK_TOKEN'
@@ -285,6 +285,20 @@ class TestResendVerifyEmailUser(TestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
+class TestLogoutUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
 
+    def test_rejects_not_authenticated_user(self):
+        response = self.client.post(
+            reverse('user_logout'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-
+    def test_successful_logout(self):
+        self.client.login(username=self.user.email, password=USER_VALID_DATA['password'])
+        self.client.get(
+            reverse('user_logout'), data={}, format='json')
+        response = self.client.get(
+            reverse('user_logout'), data={}, format='json')
+        self.assertTrue(response.status_code, status.HTTP_403_FORBIDDEN)
