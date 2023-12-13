@@ -26,7 +26,7 @@ def custom_exception_handler(exc, context):
     response_data = {
         'status': 'error',
         'message': exc.default_detail,
-        'detail': response.data,
+        'data': response.data,
         'code': ''
     }
     return Response(status=response.status_code, data=response_data)

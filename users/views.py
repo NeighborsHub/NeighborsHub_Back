@@ -122,7 +122,7 @@ class SendOtpLoginApi(APIView):
                     mobile=serializer.validated_data['mobile']
                 )
                 send_otp_mobile(user.mobile, issued_for='OTP/Login')
-                return Response(data={"status": "ok", "data": {}})
+                return Response(data={"status": "ok", "data": {}, "message": _('OTP send successfully')})
             except CustomerUser.DoesNotExist:
                 raise UserDoesNotExistAPIException
 
@@ -218,7 +218,7 @@ class LogoutApi(APIView):
         token = request.META.get('HTTP_Authorization')
         token = token.split()[1]
         redis_manager.revoke(token)
-        return Response(data={"status": "ok", "data": {}})
+        return Response(data={"status": "ok", "data": {}, "message": _("Logout successfully")})
 
 
 class SendForgetPasswordApi(APIView):
@@ -240,10 +240,10 @@ class SendForgetPasswordApi(APIView):
                 )
                 if serializer.validated_data['email_mobile'] == user.email:
                     send_token_email(user, issued_for="ForgetPassword/Email")
-                    return Response(data={"status": "ok", "data": _("Email Sent")})
+                    return Response(data={"status": "ok", "message": _("Email Sent")})
 
                 send_otp_mobile(mobile=user.mobile, issued_for="ForgetPassword/OTP")
-                return Response(data={"status": "ok", "data": _("OTP Sent")})
+                return Response(data={"status": "ok", "message": _("OTP Sent")})
             except CustomerUser.DoesNotExist:
                 raise UserDoesNotExistAPIException
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -268,7 +268,7 @@ class VerifyOtpForgetPasswordApi(APIView):
                     raise NotValidOTPAPIException
                 user.set_password(serializer.validated_data['password'])
                 user.save()
-                return Response(data={"status": "ok", "data": _('Password Changed')})
+                return Response(data={"status": "ok", "message": _('Password Changed')})
             except CustomerUser.DoesNotExist:
                 raise UserDoesNotExistAPIException
 
@@ -305,5 +305,5 @@ class VerifyEmailForgetPasswordAPI(APIView):
         if serializer.is_valid(raise_exception=True):
             user.set_password(serializer.validated_data['password'])
             user.save()
-            return Response(data={"status": "ok", "data": _('Password Changed')})
+            return Response(data={"status": "ok", "message": _('Password Changed')})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
