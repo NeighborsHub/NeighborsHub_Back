@@ -31,8 +31,8 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=30)
     birth_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    is_verified_mobile = models.BooleanField(default=True)
-    is_verified_email = models.BooleanField(default=True)
+    is_verified_mobile = models.BooleanField(default=False)
+    is_verified_email = models.BooleanField(default=False)
     user_permissions = models.ManyToManyField(
         Permission,
         blank=True,
