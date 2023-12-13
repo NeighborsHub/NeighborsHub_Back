@@ -131,3 +131,8 @@ REDIS_ENGINE = {
 }
 
 JWT_AUTH_TIME_DELTA = 30  # days
+
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'NeighborsHub.exceptions.custom_exception_handler',
+}
+

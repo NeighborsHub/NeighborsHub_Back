@@ -18,6 +18,6 @@ urlpatterns = [
     path('auth/verify-otp-forget-password', VerifyOtpForgetPasswordApi.as_view(),
          name='verify_otp_forget_password'),
     path('auth/verify-email-forget-password/<str:token>', VerifyEmailForgetPasswordAPI.as_view(),
-         name='verify_otp_forget_password'),
+         name='verify_email_forget_password'),
 
 ]

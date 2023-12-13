@@ -6,7 +6,8 @@ from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin
 from rest_framework import generics
 from django.utils.translation import gettext as _
 
-from NeighborsHub.exceptions import TokenIsNotValidAPIException
+from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExistAPIException, NotValidOTPAPIException, \
+    IncorrectUsernamePasswordException
 from NeighborsHub.permission import CustomAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from users.models import CustomerUser
@@ -89,14 +90,14 @@ class LoginApi(APIView):
     @staticmethod
     def post(request):
         serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get_user_with_mobile_or_mail(
                     user_field=serializer.validated_data['email_mobile']
                 )
                 if not user.check_password(serializer.validated_data['password']):
-                    return Response({"error": _("Email/Mobile or password is incorrect")},
-                                    status=status.HTTP_400_BAD_REQUEST)
+                    raise IncorrectUsernamePasswordException
+
                 # create jwt
                 jwt = generate_auth_token(issued_for="Authorization", user_id=user.id)
 
@@ -105,8 +106,7 @@ class LoginApi(APIView):
 
                 return Response(data={"status": "ok", "data": {"access_token": f"Bearer {jwt}"}})
             except CustomerUser.DoesNotExist:
-                return Response({"error": _("Email/Mobile or password is incorrect")},
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise IncorrectUsernamePasswordException
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -116,7 +116,7 @@ class SendOtpLoginApi(APIView):
     @staticmethod
     def post(request):
         serializer = SendLoginOtpSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get(
                     mobile=serializer.validated_data['mobile']
@@ -124,8 +124,7 @@ class SendOtpLoginApi(APIView):
                 send_otp_mobile(user.mobile, issued_for='OTP/Login')
                 return Response(data={"status": "ok", "data": {}})
             except CustomerUser.DoesNotExist:
-                return Response({"error": _("User does not exist")},
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise UserDoesNotExistAPIException
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -141,23 +140,20 @@ class VerifyOtpLoginApi(APIView):
 
     def post(self, request):
         serializer = VerifyOtpLoginSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get(
                     mobile=serializer.validated_data['mobile']
                 )
                 redis_otp = self.get_verification_redis_mobile_otp(user)
                 if redis_otp is None or redis_otp != serializer.validated_data['otp']:
-                    return Response({"error": _("OTP is not valid")}, status=status.HTTP_400_BAD_REQUEST)
+                    raise NotValidOTPAPIException
                 jwt = generate_auth_token(issued_for="Authorization", user_id=user.id)
-
                 # save token in redis
                 AuthenticationTokenRedis().create(jwt, user.id)
-
                 return Response(data={"status": "ok", "data": {"access_token": f"Bearer {jwt}"}})
             except CustomerUser.DoesNotExist:
-                return Response({"error": _("User does not exist")},
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise UserDoesNotExistAPIException
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -174,11 +170,11 @@ class VerifyMobileApi(APIView):
 
     def post(self, request):
         serializer = VerifyMobileSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             user = request.user
             redis_otp = self.get_verification_redis_mobile_otp(user)
             if redis_otp is None or redis_otp != serializer.validated_data['otp']:
-                return Response({"error": _("OTP is not valid")}, status=status.HTTP_400_BAD_REQUEST)
+                raise NotValidOTPAPIException
             user.is_verified_mobile = True
             user.verified_mobile_at = datetime.datetime.now()
             user.save()
@@ -196,7 +192,8 @@ class ResendVerifyEmailApi(APIView):
         if not user.is_verified_email:
             send_token_email(user, 'Verify/Email')
             return Response(data={"status": "ok", "data": {}})
-        return Response(data={"error": _('Email activated before')}, status=status.HTTP_400_BAD_REQUEST)
+        response_data = {"status": "error", "message": _('Email activated before'), "detail": {}, "code":""}
+        return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ResendVerifyMobileApi(APIView):
@@ -208,7 +205,8 @@ class ResendVerifyMobileApi(APIView):
         if not user.is_verified_mobile:
             send_otp_mobile(user.mobile, issued_for='Verify/Mobile')
             return Response(data={"status": "ok", "data": {}})
-        return Response(data={"error": _('Mobile activated before')}, status=status.HTTP_400_BAD_REQUEST)
+        response_data = {"status": "error", "message": _('Mobile activated before'), "detail": {}, "code":""}
+        return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LogoutApi(APIView):
@@ -235,7 +233,7 @@ class SendForgetPasswordApi(APIView):
 
     def post(self, request):
         serializer = SendForgetPasswordSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get_user_with_mobile_or_mail(
                     user_field=serializer.validated_data['email_mobile']
@@ -247,8 +245,7 @@ class SendForgetPasswordApi(APIView):
                 send_otp_mobile(mobile=user.mobile, issued_for="ForgetPassword/OTP")
                 return Response(data={"status": "ok", "data": _("OTP Sent")})
             except CustomerUser.DoesNotExist:
-                return Response({"error": _("User does not exist")},
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise UserDoesNotExistAPIException
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -263,18 +260,17 @@ class VerifyOtpForgetPasswordApi(APIView):
 
     def post(self, request):
         serializer = VerifyOtpForgetPasswordSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get(mobile=serializer.validated_data['mobile'])
                 redis_otp = self.get_verification_redis_mobile_otp(user)
                 if redis_otp is None or redis_otp != serializer.validated_data['otp']:
-                    return Response({"error": _("OTP is not valid")}, status=status.HTTP_400_BAD_REQUEST)
+                    raise NotValidOTPAPIException
                 user.set_password(serializer.validated_data['password'])
                 user.save()
                 return Response(data={"status": "ok", "data": _('Password Changed')})
             except CustomerUser.DoesNotExist:
-                return Response({"error": _("User does not exist")},
-                                status=status.HTTP_400_BAD_REQUEST)
+                raise UserDoesNotExistAPIException
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -306,7 +302,7 @@ class VerifyEmailForgetPasswordAPI(APIView):
     def post(self, request, token):
         user = self.check_token(token)
         serializer = VerifyEmailForgetPasswordSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             user.set_password(serializer.validated_data['password'])
             user.save()
             return Response(data={"status": "ok", "data": _('Password Changed')})

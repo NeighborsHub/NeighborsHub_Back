@@ -64,9 +64,10 @@ class TestRegisterUser(TestCase):
             reverse('user_register'), data=invalid_user_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('first_name', response_json)
-        self.assertIn('last_name', response_json)
-        self.assertIn('password', response_json)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('first_name', response_json['detail'])
+        self.assertIn('last_name', response_json['detail'])
+        self.assertIn('password', response_json['detail'])
 
     def test_rejects_empty_email_and_mobile(self):
         invalid_user_data = {
@@ -78,7 +79,8 @@ class TestRegisterUser(TestCase):
             reverse('user_register'), data=invalid_user_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('mobile_email_field_errors', response_json)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('mobile_email_field_errors', response_json['detail'])
 
     def test_rejects_invalid_mobile_email(self):
         invalid_user_data = {
@@ -92,8 +94,10 @@ class TestRegisterUser(TestCase):
             reverse('user_register'), data=invalid_user_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('mobile', response_json)
-        self.assertIn('email', response_json)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('message', response_json)
+        self.assertIn('mobile', response_json['detail'])
+        self.assertIn('email', response_json['detail'])
 
     def test_registered_successfully(self):
         with patch('users.utils.generate_email_token') as mock_create_token, \
@@ -149,7 +153,10 @@ class TestLoginUser(TestCase):
             reverse('user_login'), data=invalid_user_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('password', response_json)
+        self.assertIn('error', response_json['status'])
+        self.assertIn( 'Invalid input.', response_json['message'])
+        self.assertIn( 'email_mobile', response_json['detail'])
+        self.assertIn( 'password', response_json['detail'])
 
     def test_rejects_invalid_email(self):
         invalid_user_data = {
@@ -160,8 +167,9 @@ class TestLoginUser(TestCase):
             reverse('user_login'), data=invalid_user_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response_json)
-        self.assertIn('Email/Mobile or password is incorrect', response_json['error'])
+        self.assertIn('error', response_json['status'])
+        self.assertIn('Email/Mobile or password is incorrect', response_json['message'])
+        self.assertIn('login', response_json['code'])
 
     def test_rejects_invalid_password(self):
         invalid_user_data = {
@@ -172,8 +180,9 @@ class TestLoginUser(TestCase):
             reverse('user_login'), data=invalid_user_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response_json)
-        self.assertIn('Email/Mobile or password is incorrect', response_json['error'])
+        self.assertIn('error', response_json['status'])
+        self.assertIn('Email/Mobile or password is incorrect', response_json['message'])
+        self.assertIn('login', response_json['code'])
 
     def test_successfully_login(self):
         valid_user_data = {
@@ -208,8 +217,9 @@ class TestVerifyMobileUser(TestCase):
             reverse('user_verify_mobile'), data=invalid_user_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response_json)
-        self.assertIn('OTP is not valid', response_json['error'])
+        self.assertIn('error', response_json['status'])
+        self.assertIn('OTP is not valid', response_json['message'])
+        self.assertIn('otp', response_json['code'])
 
     def test_successful_verify_mobile(self):
         # check this workflow in Resend verify mobile
@@ -325,7 +335,8 @@ class TestSendOtpLoginUser(TestCase):
             reverse('user_send_otp_login'), data=invalid_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('error', response_json)
+        self.assertIn('error', response_json['status'])
+        self.assertIn('error', response_json['status'])
 
     def test_successful_send_otp_login(self):
         valid_data = {
@@ -356,8 +367,10 @@ class TestVerifyOtpLoginUser(TestCase):
             reverse('user_verify_otp_login'), data=invalid_data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('otp', response_json)
-        self.assertIn('mobile', response_json)
+        self.assertIn('error', response_json['status'])
+        self.assertIn('Invalid input.', response_json['message'])
+        self.assertIn('otp', response_json['detail'])
+        self.assertIn('mobile', response_json['detail'])
 
     def test_rejects_invalid_otp(self):
         MOCK_OTP = "12345"
@@ -371,7 +384,9 @@ class TestVerifyOtpLoginUser(TestCase):
             response = self.client.post(reverse('user_verify_otp_login'), data=invalid_data, format='json')
             response_json = response.json()
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertIn('error', response_json)
+            self.assertIn('error', response_json['status'])
+            self.assertIn('OTP is not valid', response_json['message'])
+            self.assertIn('otp', response_json['code'])
 
     def test_successful_login_with_otp(self):
         MOCK_OTP = "12345"
@@ -388,3 +403,167 @@ class TestVerifyOtpLoginUser(TestCase):
             self.assertIn('ok', response_json['status'])
             self.assertIn('access_token', response_json['data'])
             self.assertIn('Bearer ', response_json['data']['access_token'])
+
+
+class TestSendForgetPasswordUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_exist_api(self):
+        response = self.client.post(
+            reverse('send_forget_password'), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rejects_empty_data(self):
+        invalid_data = {}
+        response = self.client.post(
+            reverse('send_forget_password'), data=invalid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json['status'])
+        self.assertIn('Invalid input.', response_json['message'])
+        self.assertIn('email_mobile', response_json['detail'])
+
+    def test_rejects_invalid_user_mobile(self):
+        invalid_data = {
+            'email_mobile': "09358590410",  # invalid mobile
+        }
+
+        response = self.client.post(reverse('send_forget_password'), data=invalid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json['status'])
+        self.assertIn('User does not exist', response_json['message'])
+
+    def test_rejects_invalid_user_email(self):
+        invalid_data = {
+            'email_mobile': "8590410@gmail.com",  # invalid Email
+        }
+        response = self.client.post(reverse('send_forget_password'), data=invalid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json['status'])
+        self.assertIn('User does not exist', response_json['message'])
+
+    def test_successful_send_otp_mobile(self):
+        valid_data = {
+            'email_mobile': USER_VALID_DATA['mobile'],  # invalid mobile
+        }
+
+        response = self.client.post(reverse('send_forget_password'), data=valid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('ok', response_json['status'])
+        self.assertEqual('OTP Sent', response_json['data'])
+
+    def test_successful_send_token_email(self):
+        valid_data = {
+            'email_mobile': USER_VALID_DATA['email'],  # invalid mobile
+        }
+
+        response = self.client.post(reverse('send_forget_password'), data=valid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('ok', response_json['status'])
+        self.assertEqual('Email Sent', response_json['data'])
+
+
+class TestVerifyOTPForgetPasswordUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_exist_api(self):
+        response = self.client.post(
+            reverse('verify_otp_forget_password'), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rejects_empty_data(self):
+        invalid_data = {}
+        response = self.client.post(
+            reverse('verify_otp_forget_password'), data=invalid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json['status'])
+        self.assertIn('Invalid input.', response_json['message'])
+        self.assertIn('mobile', response_json['detail'])
+        self.assertIn('otp', response_json['detail'])
+        self.assertIn('password', response_json['detail'])
+
+    def test_rejects_invalid_user_mobile(self):
+        invalid_data = {
+            'mobile': "09358590410",  # invalid mobile
+            'otp': "123456",  # invalid mobile
+            'password': "PASSWORD",  # invalid mobile
+
+        }
+        response = self.client.post(reverse('verify_otp_forget_password'), data=invalid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json['status'])
+        self.assertIn('User does not exist', response_json['message'])
+
+    def test_rejects_invalid_otp(self):
+        MOCK_OTP = "12345"
+        invalid_data = {
+            'mobile': USER_VALID_DATA['mobile'],  # invalid mobile
+            'otp': "00000",  # invalid mobile
+            'password': "PASSWORD",  # invalid mobile
+
+        }
+        with patch('users.utils.create_mobile_otp') as create_mobile_otp:
+            create_mobile_otp.return_value = MOCK_OTP
+            self.client.post(reverse('send_forget_password'), data={'mobile': USER_VALID_DATA['mobile']}, format='json')
+            response = self.client.post(reverse('verify_otp_forget_password'), data=invalid_data, format='json')
+            response_json = response.json()
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn('error', response_json['status'])
+            self.assertIn('OTP is not valid', response_json['message'])
+            self.assertIn('otp', response_json['code'])
+
+    def test_successful_changed_password(self):
+        MOCK_OTP = "12345"
+        valid_password = "PASSWORD"
+        valid_data = {
+            'mobile': USER_VALID_DATA['mobile'],  # invalid mobile
+            'otp': MOCK_OTP,  # invalid mobile
+            'password': valid_password,  # invalid mobile
+
+        }
+        with patch('users.utils.create_mobile_otp') as create_mobile_otp:
+            create_mobile_otp.return_value = MOCK_OTP
+            self.client.post(reverse('send_forget_password'), data={'mobile': USER_VALID_DATA['mobile']}, format='json')
+            response = self.client.post(reverse('verify_otp_forget_password'), data=valid_data, format='json')
+            response_json = response.json()
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertIn('error', response_json['status'])
+            self.assertIn('OTP is not valid', response_json['message'])
+            self.assertIn('otp', response_json['code'])
+
+            # checks user can log in with new password
+            self.client.login(username=self.user.mobile, password=valid_password)
+            response = self.client.get(
+                reverse('user_logout'), data={}, format='json')
+            self.assertTrue(response.status_code, status.HTTP_200_OK)
+
+
+class TestVerifyEmailForgetPasswordUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_exist_api(self):
+        response = self.client.get(
+            reverse('verify_email_forget_password', kwargs={"token": "SOME_TEXT_HERE"}), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rejects_invalid_token(self):
+        response = self.client.get(
+            reverse('verify_email_forget_password', kwargs={"token": "SOME_TEXT_HERE"}), data={}, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json['status'])
+        self.assertEqual('Token expired', response_json['message'])
+        self.assertEqual('token_error', response_json['code'])
