@@ -215,7 +215,7 @@ class LogoutApi(APIView):
     @staticmethod
     def get(request):
         redis_manager = AuthenticationTokenRedis()
-        token = request.META.get('HTTP_Authorization')
+        token = request.META.get('Authorization')
         token = token.split()[1]
         redis_manager.revoke(token)
         return Response(data={"status": "ok", "data": {}, "message": _("Logout successfully")})

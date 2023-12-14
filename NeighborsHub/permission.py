@@ -17,7 +17,7 @@ class CustomAuthentication(authentication.BaseAuthentication):
         return True
 
     def authenticate(self, request):
-        token = request.META.get('HTTP_Authorization')
+        token = request.META.get('Authorization')
         if token is None or len(token.split())< 2:
             raise exceptions.AuthenticationFailed(_('Access token is not exist.'))
         has_error, payload = verify_custom_token(token.split()[1])
