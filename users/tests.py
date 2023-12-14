@@ -210,7 +210,7 @@ class TestVerifyMobileUser(TestCase):
 
     def test_rejects_invalid_otp(self):
         invalid_user_data = {
-            "otp": "123456"
+            "otp": "00000"
         }
         self.client.force_authenticate(self.user)
         response = self.client.post(
@@ -246,7 +246,7 @@ class TestResendVerifyMobileUser(TestCase):
         self.assertEqual('ok', response_json['status'])
 
     def test_resend_and_verify_mobile(self):
-        MOCK_OTP = 123456
+        MOCK_OTP = "12345"
         with patch('users.utils.create_mobile_otp') as create_mobile_otp:
             create_mobile_otp.return_value = MOCK_OTP
             self.client.force_authenticate(self.user)
