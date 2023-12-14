@@ -536,10 +536,9 @@ class TestVerifyOTPForgetPasswordUser(TestCase):
             self.client.post(reverse('send_forget_password'), data={'mobile': USER_VALID_DATA['mobile']}, format='json')
             response = self.client.post(reverse('verify_otp_forget_password'), data=valid_data, format='json')
             response_json = response.json()
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertIn('error', response_json['status'])
-            self.assertIn('OTP is not valid', response_json['message'])
-            self.assertIn('otp', response_json['code'])
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn('ok', response_json['status'])
+        
 
             # checks user can log in with new password
             self.client.login(username=self.user.mobile, password=new_password)
