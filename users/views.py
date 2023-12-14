@@ -27,8 +27,8 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
 
     @staticmethod
     def send_verify_email(user: CustomerUser) -> None:
-        send_token_email(user, 'Verify/Email')
-        return None
+        token = send_token_email(user, 'Verify/Email')
+        return token
 
     @staticmethod
     def send_verification_mobile(user: CustomerUser) -> None:
@@ -46,19 +46,20 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
     def perform_create(self, serializer):
         user = serializer.save()
         if user.email is not None:
-            self.send_verify_email(user)
+            token = self.send_verify_email(user)
         if user.mobile is not None:
             self.send_verification_mobile(user)
         # create jwt
-        return user
+        return user, token
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = self.perform_create(serializer)
+        user, token = self.perform_create(serializer)
         response_data = {
             'status': "ok",
-            'data': {"user": serializer.data, "access_token": f"Bearer {self.create_jwt_authorization(user.id)}"}
+            'data': {"user": serializer.data, "access_token": f"Bearer {self.create_jwt_authorization(user.id)}"},
+            'verify_email_token': token
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
 
@@ -190,9 +191,9 @@ class ResendVerifyEmailApi(APIView):
     def get(request):
         user = request.user
         if not user.is_verified_email:
-            send_token_email(user, 'Verify/Email')
-            return Response(data={"status": "ok", "data": {}})
-        response_data = {"status": "error", "message": _('Email activated before'), "detail": {}, "code":""}
+            token = send_token_email(user, 'Verify/Email')
+            return Response(data={"status": "ok", "data": {}, "verify_email_token": token})
+        response_data = {"status": "error", "message": _('Email activated before'), "detail": {}, "code": ""}
         return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -205,7 +206,7 @@ class ResendVerifyMobileApi(APIView):
         if not user.is_verified_mobile:
             send_otp_mobile(user.mobile, issued_for='Verify/Mobile')
             return Response(data={"status": "ok", "data": {}})
-        response_data = {"status": "error", "message": _('Mobile activated before'), "detail": {}, "code":""}
+        response_data = {"status": "error", "message": _('Mobile activated before'), "detail": {}, "code": ""}
         return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -215,7 +216,7 @@ class LogoutApi(APIView):
     @staticmethod
     def get(request):
         redis_manager = AuthenticationTokenRedis()
-        token = request.META.get('Authorization')
+        token = request.META.get('HTTP_AUTHORIZATION')
         token = token.split()[1]
         redis_manager.revoke(token)
         return Response(data={"status": "ok", "data": {}, "message": _("Logout successfully")})
@@ -239,8 +240,8 @@ class SendForgetPasswordApi(APIView):
                     user_field=serializer.validated_data['email_mobile']
                 )
                 if serializer.validated_data['email_mobile'] == user.email:
-                    send_token_email(user, issued_for="ForgetPassword/Email")
-                    return Response(data={"status": "ok", "message": _("Email Sent")})
+                    token = send_token_email(user, issued_for="ForgetPassword/Email")
+                    return Response(data={"status": "ok", "message": _("Email Sent"), "verify_email_token": token})
 
                 send_otp_mobile(mobile=user.mobile, issued_for="ForgetPassword/OTP")
                 return Response(data={"status": "ok", "message": _("OTP Sent")})

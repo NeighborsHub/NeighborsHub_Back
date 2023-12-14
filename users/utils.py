@@ -29,4 +29,5 @@ def send_token_email(user: CustomerUser, issued_for: str) -> None:
     mail_sender = SendEmail()
     # TODO: USE issue_for message body and title
     mail_sender.run(mail_destination=user.email, title=_(issued_for), body=token)
-    return None
+    return token
+

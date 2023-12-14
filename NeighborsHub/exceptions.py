@@ -25,8 +25,8 @@ def custom_exception_handler(exc, context):
     response = exception_handler(exc, context)
     response_data = {
         'status': 'error',
-        'message': exc.default_detail,
-        'data': response.data,
+        'message': getattr(exc, 'default_detail', None),
+        'data': getattr(response, 'data', None),
         'code': ''
     }
     return Response(status=response.status_code, data=response_data)
