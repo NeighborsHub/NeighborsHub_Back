@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _
 
 def send_otp_mobile(mobile: str, issued_for: str) -> None:
     otp = create_mobile_otp(length=5)
+    otp = 12345  # mock otp
     redis_manager = VerificationOTPRedis(issued_for=issued_for)
     redis_manager.revoke(mobile)
     redis_manager.create(mobile, otp)
