@@ -10,15 +10,38 @@ from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExis
     IncorrectUsernamePasswordException
 from NeighborsHub.permission import CustomAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
-from users.models import CustomerUser
-from users.serializers import UserRegistrationSerializer, LoginSerializer, VerifyMobileSerializer, \
-    SendLoginOtpSerializer, VerifyOtpLoginSerializer, SendForgetPasswordSerializer, VerifyOtpForgetPasswordSerializer, \
-    VerifyEmailForgetPasswordSerializer
+from users.models import CustomerUser, validate_email
+from users.serializers import UserRegistrationSerializer, LoginSerializer, \
+    SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
+    VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 
-from users.utils import send_otp_mobile, send_token_email
+from users.utils import send_otp_mobile, send_token_email, send_otp_email
+
+
+class PreRegisterAPI(APIView):
+    @staticmethod
+    def post(request):
+        serializer = EmailMobileFieldSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            is_email = validate_email(serializer.validated_data['email_mobile'])
+            try:
+                get_user_model().objects.get_user_with_mobile_or_mail(
+                    user_field=serializer.validated_data['email_mobile'])
+                response_data = {'status': "error", 'data': '', 'message': _('User registered before')}
+                return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+            except CustomerUser.DoesNotExist:
+                pass
+            if is_email:
+                send_otp_email(serializer.validated_data['email_mobile'], issued_for="Verify/Email")
+                response_message = _('Email sent')
+            else:
+                send_otp_mobile(serializer.validated_data['email_mobile'], issued_for="Verify/Mobile")
+                response_message = _('SMS sent')
+            response_data = {'status': "ok", 'data': '', 'message': response_message}
+            return Response(data=response_data, status=status.HTTP_200_OK)
 
 
 class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
@@ -26,14 +49,13 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
 
     @staticmethod
-    def send_verify_email(user: CustomerUser) -> None:
-        token = send_token_email(user, 'Verify/Email')
-        return token
-
-    @staticmethod
-    def send_verification_mobile(user: CustomerUser) -> None:
-        send_otp_mobile(user.mobile, issued_for="Verify/Mobile")
-        return None
+    def is_valid_otp(otp: str, email_mobile: str) -> bool:
+        issued_for = "Verify/Email" if validate_email(email_mobile) else "Verify/Mobile"
+        redis_manager = VerificationOTPRedis(issued_for=issued_for)
+        redis_otp = redis_manager.get(email_mobile)
+        if isinstance(redis_otp, bytes):
+            redis_otp = redis_otp.decode('utf-8')
+        return otp == redis_otp
 
     @staticmethod
     def create_jwt_authorization(user_id):
@@ -45,21 +67,19 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
-        if user.email is not None:
-            token = self.send_verify_email(user)
-        if user.mobile is not None:
-            self.send_verification_mobile(user)
-        # create jwt
-        return user, token
+        return user
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user, token = self.perform_create(serializer)
+        if not self.is_valid_otp(serializer.validated_data['otp'], serializer.validated_data['email_mobile']):
+            response_data = {'status': "error", 'data': {'otp': [_('OTP is not valid')]},
+                             'message': 'Invalid Input'}
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        user = self.perform_create(serializer)
         response_data = {
             'status': "ok",
             'data': {"user": serializer.data, "access_token": f"Bearer {self.create_jwt_authorization(user.id)}"},
-            'verify_email_token': token
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
 
@@ -116,7 +136,7 @@ class SendOtpLoginApi(APIView):
 
     @staticmethod
     def post(request):
-        serializer = SendLoginOtpSerializer(data=request.data)
+        serializer = SendMobileOtpSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get(
@@ -140,7 +160,7 @@ class VerifyOtpLoginApi(APIView):
         return redis_otp
 
     def post(self, request):
-        serializer = VerifyOtpLoginSerializer(data=request.data)
+        serializer = VerifyOtpMobileSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get(
@@ -158,56 +178,90 @@ class VerifyOtpLoginApi(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SendVerifyMobileAPI(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def post(request):
+        serializer = SendMobileOtpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if get_user_model().objects.filter(mobile=serializer.validated_data['mobile']).exists():
+            response_data = {'status': "error", 'data': '', 'message': _('Mobile exist')}
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+        send_otp_mobile(serializer.validated_data['mobile'], issued_for="Verify/Mobile")
+        response_message = _('SMS sent')
+        response_data = {'status': "ok", 'data': '', 'message': response_message}
+        return Response(data=response_data, status=status.HTTP_200_OK)
+
+
 class VerifyMobileApi(APIView):
     authentication_classes = (CustomAuthentication,)
 
     @staticmethod
-    def get_verification_redis_mobile_otp(user: CustomerUser) -> str:
+    def is_valid_otp(otp, mobile: str) -> bool:
         redis = VerificationOTPRedis(issued_for='Verify/Mobile')
-        redis_otp = redis.get(user.mobile)
+        redis_otp = redis.get(mobile)
         if isinstance(redis_otp, bytes):
             redis_otp = redis_otp.decode('utf-8')
-        return redis_otp
+        return redis_otp == otp
 
     def post(self, request):
-        serializer = VerifyMobileSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            user = request.user
-            redis_otp = self.get_verification_redis_mobile_otp(user)
-            if redis_otp is None or redis_otp != serializer.validated_data['otp']:
-                raise NotValidOTPAPIException
-            user.is_verified_mobile = True
-            user.verified_mobile_at = datetime.datetime.now()
-            user.save()
-            return Response(data={"status": "ok", "data": {}})
+        serializer = VerifyOtpMobileSerializer(data=request.data)
+        user = request.user
+        serializer.is_valid(raise_exception=True)
+        if get_user_model().objects.filter(mobile=serializer.validated_data['mobile']).exists():
+            response_data = {'status': "error", 'data': '', 'message': _('Mobile exist')}
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+        if not self.is_valid_otp(serializer.validated_data['otp'], serializer.validated_data['mobile']):
+            raise NotValidOTPAPIException
+        user.mobile = serializer.validated_data['mobile']
+        user.is_verified_mobile = True
+        user.verified_mobile_at = datetime.datetime.now()
+        user.save()
+        return Response(data={"status": "ok", "data": {}, 'message': _('Mobile Saved')})
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class ResendVerifyEmailApi(APIView):
+class VerifyOTPEmailAPI(APIView):
     authentication_classes = (CustomAuthentication,)
 
     @staticmethod
-    def get(request):
+    def is_valid_otp(otp, email: str) -> bool:
+        redis = VerificationOTPRedis(issued_for='Verify/Email')
+        redis_otp = redis.get(email)
+        if isinstance(redis_otp, bytes):
+            redis_otp = redis_otp.decode('utf-8')
+        return redis_otp == otp
+
+    def post(self, request):
+        serializer = VerifyEmailOtpSerializer(data=request.data)
         user = request.user
-        if not user.is_verified_email:
-            token = send_token_email(user, 'Verify/Email')
-            return Response(data={"status": "ok", "data": {}, "verify_email_token": token})
-        response_data = {"status": "error", "message": _('Email activated before'), "detail": {}, "code": ""}
-        return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        if get_user_model().objects.filter(email=serializer.validated_data['email']).exists():
+            response_data = {'status': "error", 'data': '', 'message': _('Email exists')}
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+        if not self.is_valid_otp(serializer.validated_data['otp'], serializer.validated_data['email']):
+            raise NotValidOTPAPIException
+        user.email = serializer.validated_data['email']
+        user.is_verified_email = True
+        user.verified_email_at = datetime.datetime.now()
+        user.save()
+        return Response(data={"status": "ok", "data": {}, 'message': _('Email Saved')})
 
 
-class ResendVerifyMobileApi(APIView):
+class SendVerifyEmailAPI(APIView):
     authentication_classes = (CustomAuthentication,)
 
     @staticmethod
-    def get(request):
-        user = request.user
-        if not user.is_verified_mobile:
-            send_otp_mobile(user.mobile, issued_for='Verify/Mobile')
-            return Response(data={"status": "ok", "data": {}})
-        response_data = {"status": "error", "message": _('Mobile activated before'), "detail": {}, "code": ""}
-        return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+    def post(request):
+        serializer = SendEmailOtpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if get_user_model().objects.filter(email=serializer.validated_data['email']).exists():
+            response_data = {'status': "error", 'data': '', 'message': _('Email exists')}
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+        send_otp_email(serializer.validated_data['email'], issued_for="Verify/Email")
+        response_message = _('Email sent')
+        response_data = {'status': "ok", 'data': '', 'message': response_message}
+        return Response(data=response_data, status=status.HTTP_200_OK)
 
 
 class LogoutApi(APIView):
@@ -233,7 +287,7 @@ class SendForgetPasswordApi(APIView):
         return redis_otp
 
     def post(self, request):
-        serializer = SendForgetPasswordSerializer(data=request.data)
+        serializer = EmailMobileFieldSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get_user_with_mobile_or_mail(

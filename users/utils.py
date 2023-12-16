@@ -11,7 +11,7 @@ from django.utils.translation import gettext as _
 
 def send_otp_mobile(mobile: str, issued_for: str) -> None:
     otp = create_mobile_otp(length=5)
-    otp = 12345  # mock otp
+    otp = "12345"  # mock otp
     redis_manager = VerificationOTPRedis(issued_for=issued_for)
     redis_manager.revoke(mobile)
     redis_manager.create(mobile, otp)
@@ -31,3 +31,15 @@ def send_token_email(user: CustomerUser, issued_for: str) -> None:
     mail_sender.run(mail_destination=user.email, title=_(issued_for), body=token)
     return token
 
+
+def send_otp_email(email: str, issued_for: str) -> None:
+    otp = create_mobile_otp(length=5)
+    otp = "12345"  # mock otp
+    redis_manager = VerificationOTPRedis(issued_for=issued_for)
+    redis_manager.revoke(email)
+    redis_manager.create(email, otp)
+
+    mail_sender = SendEmail()
+    # TODO: USE issue_for message body and title
+    mail_sender.run(mail_destination=email, title=_(issued_for), body=otp)
+    return None

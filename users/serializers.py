@@ -7,54 +7,35 @@ import re
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    mobile = serializers.CharField(required=False)
-    email = serializers.CharField(required=False)
+    email_mobile = serializers.CharField(required=True, write_only=True)
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
     password = serializers.CharField(required=True, write_only=True)
+    otp = serializers.CharField(required=True, write_only=True)
 
     class Meta:
         model = get_user_model()
-        fields = ['email', 'mobile', 'first_name', 'last_name', 'password']
-
-    def validate(self, values):
-        email = values.get('email')
-        mobile = values.get('mobile')
-
-        if email is None and mobile is None:
-            raise serializers.ValidationError(
-                {'mobile_email_field_errors': [_('Ether Email or Mobile must be provided.')]})
-        return values
+        fields = ['email', 'mobile', 'first_name', 'last_name', 'password', 'otp', 'email_mobile']
 
     @staticmethod
-    def validate_email(value):
-        if value is not None:
-            if not validate_email(value):
-                raise serializers.ValidationError(_('Invalid email format'))
-            if get_user_model().objects.filter(email=value).exists():
-                raise serializers.ValidationError(_('Email is existed.'))
-        return value.lower() if value is not None else value
-
-    @staticmethod
-    def validate_mobile(value):
-        if value is not None:
-            if not validate_mobile(value):
-                raise serializers.ValidationError(_('Invalid email format'))
-            if get_user_model().objects.filter(mobile=value).exists():
-                raise serializers.ValidationError(_('Mobile is existed.'))
-        return value
+    def validate_email_mobile(value):
+        if validate_email(value):
+            return value.lower()
+        if validate_mobile(value):
+            return value
+        raise serializers.ValidationError(_('Invalid email/mobile format'))
 
     def create(self, validated_data):
+        is_email = validate_email(validated_data['email_mobile'])
         user = get_user_model().objects.create(
-            email=validated_data['email'],
-            mobile=validated_data['mobile'],
+            email=validated_data['email_mobile'] if is_email else None,
+            mobile=validated_data['email_mobile'] if not is_email else None,
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             is_active=False,
             is_verified_mobile=False,
             is_verified_email=False
         )
-
         user.set_password(validated_data['password'])
         user.save()
         return user
@@ -77,11 +58,11 @@ class LoginSerializer(serializers.ModelSerializer):
         fields = ['email_mobile', 'password']
 
 
-class SendLoginOtpSerializer(serializers.ModelSerializer):
+class SendMobileOtpSerializer(serializers.ModelSerializer):
     mobile = serializers.CharField(required=True, write_only=True)
 
     @staticmethod
-    def validate_email_mobile(value):
+    def validate_mobile(value):
         if validate_mobile(value):
             return value
         raise serializers.ValidationError(_('Invalid mobile format'))
@@ -91,11 +72,20 @@ class SendLoginOtpSerializer(serializers.ModelSerializer):
         fields = ['mobile', ]
 
 
-class VerifyMobileSerializer(serializers.ModelSerializer):
+class VerifyOtpMobileSerializer(serializers.ModelSerializer):
     otp = serializers.CharField(required=True, write_only=True)
+    mobile = serializers.CharField(required=True, write_only=True)
 
     @staticmethod
-    def validate_otp(value):
+    def validate_mobile(value):
+        if validate_mobile(value):
+            return value
+        raise serializers.ValidationError(_('Invalid mobile format'))
+
+    def validate_otp(self, value):
+        # Perform validation logic here
+        if not isinstance(value, str):
+            raise serializers.ValidationError("Value must be an String.")
         mobile_regex = r"^[0-9]{5,}$"
         if re.match(mobile_regex, value) is not None:
             return value
@@ -103,16 +93,48 @@ class VerifyMobileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ['otp', ]
-
-
-class VerifyOtpLoginSerializer(VerifyMobileSerializer, SendLoginOtpSerializer):
-    class Meta:
-        model = get_user_model()
         fields = ['otp', 'mobile', ]
 
 
-class SendForgetPasswordSerializer(serializers.ModelSerializer):
+class SendEmailOtpSerializer(serializers.ModelSerializer):
+    email = serializers.CharField(required=True, write_only=True)
+
+    @staticmethod
+    def validate_email(value):
+        if validate_email(value):
+            return value.lower()
+        raise serializers.ValidationError(_('Invalid email format'))
+
+    class Meta:
+        model = get_user_model()
+        fields = ['email', ]
+
+
+class VerifyEmailOtpSerializer(serializers.ModelSerializer):
+    email = serializers.CharField(required=True, write_only=True)
+    otp = serializers.CharField(required=True, write_only=True)
+
+    @staticmethod
+    def validate_email(value):
+        if validate_email(value):
+            return value.lower()
+        raise serializers.ValidationError(_('Invalid email format'))
+
+    def validate_otp(self, value):
+        # Perform validation logic here
+        if not isinstance(value, str):
+            raise serializers.ValidationError("Value must be an String.")
+        mobile_regex = r"^[0-9]{5,}$"
+        if re.match(mobile_regex, value) is not None:
+            return value
+        raise serializers.ValidationError(_('Invalid OTP format'))
+
+    class Meta:
+        model = get_user_model()
+        fields = ['email', 'otp']
+
+
+class EmailMobileFieldSerializer(serializers.ModelSerializer):
     email_mobile = serializers.CharField(required=True, write_only=True)
 
     @staticmethod
@@ -136,9 +158,7 @@ class VerifyEmailForgetPasswordSerializer(serializers.ModelSerializer):
         fields = ['password', ]
 
 
-class VerifyOtpForgetPasswordSerializer(VerifyMobileSerializer,
-                                        SendLoginOtpSerializer,
-                                        VerifyEmailForgetPasswordSerializer):
+class VerifyOtpForgetPasswordSerializer(VerifyOtpMobileSerializer, VerifyEmailForgetPasswordSerializer):
     class Meta:
         model = get_user_model()
         fields = ['otp', 'mobile', 'password']

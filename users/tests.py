@@ -48,6 +48,53 @@ class TestUserModel(TestCase):
         self.assertIsNotNone(test_obj)
 
 
+class TestPreRegisterUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+
+    def test_url_exists(self):
+        response = self.client.post(
+            reverse('user_preregister'), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rejects_empty_data(self):
+        invalid_user_data = {}
+        response = self.client.post(
+            reverse('user_preregister'), data=invalid_user_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('email_mobile', response_json['data'])
+
+    def test_successful_valid_mobile(self):
+        valid_data = {'email_mobile': '09373875028'}
+        response = self.client.post(
+            reverse('user_preregister'), data=valid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertIn('SMS sent', response_json['message'])
+
+    def test_successful_valid_email(self):
+        valid_data = {'email_mobile': 'mldtavakkoli@gmail.com'}
+        response = self.client.post(
+            reverse('user_preregister'), data=valid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertIn('Email sent', response_json['message'])
+
+    def test_rejects_registered_email(self):
+        user = _create_user()
+        valid_data = {'email_mobile': user.email}
+        response = self.client.post(
+            reverse('user_preregister'), data=valid_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('User registered before', response_json['message'])
+
+
 class TestRegisterUser(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
@@ -66,29 +113,19 @@ class TestRegisterUser(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual('error', response_json['status'])
         self.assertIn('first_name', response_json['data'])
+        self.assertIn('email_mobile', response_json['data'])
         self.assertIn('last_name', response_json['data'])
         self.assertIn('password', response_json['data'])
-
-    def test_rejects_empty_email_and_mobile(self):
-        invalid_user_data = {
-            'first_name': 'Milad',
-            'last_name': 'Tavakoli',
-            'password': 'noob'
-        }
-        response = self.client.post(
-            reverse('user_register'), data=invalid_user_data, format='json')
-        response_json = response.json()
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual('error', response_json['status'])
-        self.assertIn('mobile_email_field_errors', response_json['data'])
+        self.assertIn('otp', response_json['data'])
 
     def test_rejects_invalid_mobile_email(self):
         invalid_user_data = {
             'first_name': 'Milad',
             'last_name': 'Tavakoli',
             'password': 'noob',
-            'email': '8590410',
-            'mobile': 'o9373875'
+            'email_mobile': 'mldtavakkoli',
+            'otp': '00000'
+
         }
         response = self.client.post(
             reverse('user_register'), data=invalid_user_data, format='json')
@@ -96,22 +133,27 @@ class TestRegisterUser(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual('error', response_json['status'])
         self.assertIn('message', response_json)
-        self.assertIn('mobile', response_json['data'])
-        self.assertIn('email', response_json['data'])
+        self.assertIn('email_mobile', response_json['data'])
 
-    def test_registered_successfully(self):
-        with patch('users.utils.generate_email_token') as mock_create_token, \
-                patch('users.views.verify_custom_token') as mock_verify_token:
-            mock_create_token.return_value = 'MOCK_TOKEN'
-            response = self.client.post(
-                reverse('user_register'), data=USER_VALID_DATA, format='json')
-            # print(f"generate_email_token called: {mock_create_token.called}")
+    def test_registered_successfully_with_mail(self):
+        with patch('users.utils.create_mobile_otp') as mock_create_otp:
+            mock_create_otp.return_value = '12345'
+            self.client.post(reverse('user_preregister'), data={'email_mobile': USER_VALID_DATA['email']},
+                             format='json')
+            valid_input_data = {
+                'email_mobile': USER_VALID_DATA['email'],
+                'first_name': USER_VALID_DATA['first_name'],
+                'last_name': USER_VALID_DATA['last_name'],
+                'password': USER_VALID_DATA['password'],
+                'otp': '12345',
+            }
+            response = self.client.post(reverse('user_register'), data=valid_input_data, format='json')
 
             response_json = response.json()
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             self.assertEqual(response_json['status'], 'ok')
             self.assertEqual(response_json['data']['user']['email'], USER_VALID_DATA['email'])
-            self.assertEqual(response_json['data']['user']['mobile'], USER_VALID_DATA['mobile'])
+            self.assertEqual(response_json['data']['user']['mobile'], None)
             self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
             self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
             self.assertIn('access_token', response_json['data'])
@@ -119,21 +161,43 @@ class TestRegisterUser(TestCase):
 
             created_user = get_user_model().objects.filter(
                 email=USER_VALID_DATA['email'],
+                first_name=USER_VALID_DATA['first_name'],
+                last_name=USER_VALID_DATA['last_name'],
+                is_active=False,
+            ).first()
+            self.assertIsNotNone(created_user)
+
+    def test_registered_successfully_with_mobile(self):
+        with patch('users.utils.create_mobile_otp') as mock_create_otp:
+            mock_create_otp.return_value = '12345'
+            self.client.post(reverse('user_preregister'), data={'email_mobile': USER_VALID_DATA['mobile']},
+                             format='json')
+            valid_input_data = {
+                'email_mobile': USER_VALID_DATA['mobile'],
+                'first_name': USER_VALID_DATA['first_name'],
+                'last_name': USER_VALID_DATA['last_name'],
+                'password': USER_VALID_DATA['password'],
+                'otp': '12345',
+            }
+            response = self.client.post(reverse('user_register'), data=valid_input_data, format='json')
+
+            response_json = response.json()
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response_json['status'], 'ok')
+            self.assertEqual(response_json['data']['user']['email'], None)
+            self.assertEqual(response_json['data']['user']['mobile'], USER_VALID_DATA['mobile'])
+            self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
+            self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
+            self.assertIn('access_token', response_json['data'])
+            self.assertIn('Bearer ', response_json['data']['access_token'])
+
+            created_user = get_user_model().objects.filter(
                 mobile=USER_VALID_DATA['mobile'],
                 first_name=USER_VALID_DATA['first_name'],
                 last_name=USER_VALID_DATA['last_name'],
                 is_active=False,
             ).first()
             self.assertIsNotNone(created_user)
-            mock_verify_token.return_value = (False, {'payload': {"issued_for": 'Verify/Email',
-                                                                  "user_id": created_user.id,
-                                                                  "email": USER_VALID_DATA['email']}})
-
-            response = self.client.get(
-                reverse('user_verify_email', kwargs={'token': 'MOCK_TOKEN'}))
-            mock_verify_token.assert_called_once_with('MOCK_TOKEN')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response_json['status'], 'ok')
 
 
 class TestLoginUser(TestCase):
@@ -210,7 +274,8 @@ class TestVerifyMobileUser(TestCase):
 
     def test_rejects_invalid_otp(self):
         invalid_user_data = {
-            "otp": "123456"
+            "otp": "00000",
+            "mobile": "09358590310"
         }
         self.client.force_authenticate(self.user)
         response = self.client.post(
@@ -231,28 +296,29 @@ class TestResendVerifyMobileUser(TestCase):
         self.client = APIClient()
         self.user = _create_user()
 
-    def test_rejects_not_authenticated_user(self):
+    def test_url_exists(self):
         response = self.client.post(
-            reverse('user_resend_verify_mobile'), data={}, format='json')
+            reverse('user_send_verify_mobile'), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_successful_resend_otp_verify(self):
+    def test_successful_send_otp_verify(self):
         self.client.force_authenticate(self.user)
-        response = self.client.get(
-            reverse('user_resend_verify_mobile'), data={}, format='json')
+        response = self.client.post(
+            reverse('user_send_verify_mobile'), data={'mobile': '09358590410'}, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('status', response_json)
         self.assertEqual('ok', response_json['status'])
 
-    def test_resend_and_verify_mobile(self):
-        MOCK_OTP = 123456
+    def test_send_and_verify_mobile(self):
+        self.client.force_authenticate(self.user)
+        MOCK_OTP = "12345"
         with patch('users.utils.create_mobile_otp') as create_mobile_otp:
             create_mobile_otp.return_value = MOCK_OTP
-            self.client.force_authenticate(self.user)
-            response = self.client.get(
-                reverse('user_resend_verify_mobile'), data={}, format='json')
+            response = self.client.post(
+                reverse('user_send_verify_mobile'), data={'mobile': '09358590410'}, format='json')
             valid_user_data = {
+                'mobile': '09358590410',
                 "otp": MOCK_OTP
             }
             response = self.client.post(
@@ -263,39 +329,45 @@ class TestResendVerifyMobileUser(TestCase):
             self.assertEqual('ok', response_json['status'])
 
 
-class TestResendVerifyEmailUser(TestCase):
+class TestSendVerifyEmailUser(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.user = _create_user()
 
     def test_rejects_not_authenticated_user(self):
         response = self.client.post(
-            reverse('user_resend_verify_email'), data={}, format='json')
+            reverse('user_send_verify_otp_email'), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_successful_resend_email_verify(self):
         self.client.force_authenticate(self.user)
-        response = self.client.get(
-            reverse('user_resend_verify_email'), data={}, format='json')
+        response = self.client.post(
+            reverse('user_send_verify_otp_email'), data={'email': '8590410@gmail.com'}, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('status', response_json)
         self.assertEqual('ok', response_json['status'])
 
-    def test_resend_and_verify_email(self):
-        with patch('users.utils.generate_email_token') as mock_create_token, \
-                patch('users.views.verify_custom_token') as mock_verify_token:
-            mock_create_token.return_value = 'MOCK_TOKEN'
-            mock_verify_token.return_value = (False, {'payload': {"issued_for": 'Verify/Email',
-                                                                  "user_id": self.user.id,
-                                                                  "email": self.user.email}})
-            self.client.force_authenticate(self.user)
-            response = self.client.get(
-                reverse('user_resend_verify_email'), data={}, format='json')
+    def test_send_and_verify_otp_email(self):
+        self.client.force_authenticate(self.user)
+        MOCK_TOKEN = '12345'
+        with patch('users.utils.create_mobile_otp') as mock_otp:
+            mock_otp.return_value = MOCK_TOKEN
+            self.client.post(
+                reverse('user_send_verify_otp_email'), data={'email': '8590410@gmail.com'}, format='json')
 
-            response = self.client.get(
-                reverse('user_verify_email', kwargs={'token': 'MOCK_TOKEN'}))
+            valid_data = {
+                'email': '8590410@gmail.com',
+                'otp': MOCK_TOKEN
+            }
+
+            response = self.client.post(
+                reverse('user_verify_otp_email'), data=valid_data, format='json')
+            response_json = response.json()
             self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn('status', response_json)
+            self.assertEqual('ok', response_json['status'])
+            self.assertEqual('Email Saved', response_json['message'])
 
 
 class TestLogoutUser(TestCase):
@@ -536,10 +608,8 @@ class TestVerifyOTPForgetPasswordUser(TestCase):
             self.client.post(reverse('send_forget_password'), data={'mobile': USER_VALID_DATA['mobile']}, format='json')
             response = self.client.post(reverse('verify_otp_forget_password'), data=valid_data, format='json')
             response_json = response.json()
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertIn('error', response_json['status'])
-            self.assertIn('OTP is not valid', response_json['message'])
-            self.assertIn('otp', response_json['code'])
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn('ok', response_json['status'])
 
             # checks user can log in with new password
             self.client.login(username=self.user.mobile, password=new_password)
@@ -562,7 +632,6 @@ class TestVerifyEmailForgetPasswordUser(TestCase):
         response = self.client.get(
             reverse('verify_email_forget_password', kwargs={"token": "SOME_TEXT_HERE"}), data={}, format='json')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response_json['status'])
         self.assertEqual('Token expired', response_json['message'])
