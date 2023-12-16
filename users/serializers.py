@@ -20,9 +20,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     @staticmethod
     def validate_email_mobile(value):
         if validate_email(value):
+            if get_user_model().objects.filter(email=value.lower()).exists():
+                raise serializers.ValidationError(_('Email registered before'))
             return value.lower()
         if validate_mobile(value):
-            return value
+            if get_user_model().objects.filter(mobile=value.lower()).exists():
+                raise serializers.ValidationError(_('Mobile registered before'))
+            return value.lower()
         raise serializers.ValidationError(_('Invalid email/mobile format'))
 
     def create(self, validated_data):

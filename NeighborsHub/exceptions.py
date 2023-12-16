@@ -23,13 +23,17 @@ def custom_exception_handler(exc, context):
     if isinstance(exc, CustomException):
         return exc.handle_custom_exception()
     response = exception_handler(exc, context)
-    response_data = {
-        'status': 'error',
-        'message': getattr(exc, 'default_detail', None),
-        'data': getattr(response, 'data', None),
-        'code': ''
-    }
-    return Response(status=response.status_code, data=response_data)
+    try:
+        response_data = {
+            'status': 'error',
+            'message': getattr(exc, 'default_detail', None),
+            'data': getattr(response, 'data', None),
+            'code': ''
+        }
+        return Response(status=response.status_code, data=response_data)
+    except Exception as exc:
+        print(exc)
+        raise ServerErrorException
 
 
 class TokenIsNotValidAPIException(CustomException):
@@ -60,3 +64,9 @@ class IncorrectUsernamePasswordException(CustomException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_code = 'login'
     default_detail = _("Email/Mobile or password is incorrect")
+
+
+class ServerErrorException(CustomException):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    default_code = 'Server Error'
+    default_detail = _("Unsuported Exception")
