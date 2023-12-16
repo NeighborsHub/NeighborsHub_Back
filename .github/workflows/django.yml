@@ -52,6 +52,7 @@ jobs:
             username: ${{ secrets.SERVER_USERNAME }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script: |
+              sudo su &&
               cd /var/django/NeighborsHub_Back &&
               git pull origin main &&
               venv/bin/python manage.py migrate &&
