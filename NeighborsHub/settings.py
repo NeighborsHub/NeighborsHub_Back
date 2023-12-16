@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # 3rd party
     'rest_framework',
+    'corsheaders',
 
     # apps
     'core',
@@ -52,7 +53,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'NeighborsHub.urls'
 
@@ -135,4 +140,3 @@ JWT_AUTH_TIME_DELTA = 30  # days
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'NeighborsHub.exceptions.custom_exception_handler',
 }
-

@@ -54,5 +54,6 @@ jobs:
             script: |
               cd /var/django/NeighborsHub_Back 
               sudo git pull 
+              sudo venv/bin/python -m pip install -r requirements.txt
               sudo venv/bin/python manage.py migrate 
               sudo systemctl restart django.service
