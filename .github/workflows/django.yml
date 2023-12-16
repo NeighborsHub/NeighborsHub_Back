@@ -46,12 +46,12 @@ jobs:
           python manage.py test
 
       - name: Deploy to Server
-        uses: easingthemes/ssh-deploy@v2.1.1
+        uses: appleboy/ssh-action@v1.0.0
         with:
-            REMOTE_HOST: ${{ secrets.SERVER_HOST }}
-            REMOTE_USER: ${{ secrets.SERVER_USERNAME }}
-            SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-            SCRIPT_AFTER: |
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USERNAME }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            script: |
               cd /var/django/NeighborsHub_Back &&
               git pull origin main &&
               venv/bin/python manage.py migrate &&
