@@ -52,11 +52,7 @@ jobs:
             username: ${{ secrets.SERVER_USERNAME }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script: |
-              sudo su -
-              whoami
               cd /var/django/NeighborsHub_Back 
-              ls -la
-              pwd
               sudo git pull 
-              venv/bin/python manage.py migrate 
+              sudo venv/bin/python manage.py migrate 
               sudo systemctl restart django.service
