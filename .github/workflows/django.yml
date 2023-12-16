@@ -57,6 +57,6 @@ jobs:
               cd /var/django/NeighborsHub_Back 
               ls -la
               pwd
-              git pull 
+              sudo git pull 
               venv/bin/python manage.py migrate 
               sudo systemctl restart django.service
