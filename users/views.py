@@ -13,7 +13,8 @@ from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOT
 from users.models import CustomerUser, validate_email
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
-    VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer
+    VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
+    VerifyEmailMobileFieldSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -44,10 +45,7 @@ class PreRegisterAPI(APIView):
             return Response(data=response_data, status=status.HTTP_200_OK)
 
 
-class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
-    singular_name = 'user'
-    serializer_class = UserRegistrationSerializer
-
+class VerifyPreRegisterAPI(APIView):
     @staticmethod
     def is_valid_otp(otp: str, email_mobile: str) -> bool:
         issued_for = "Verify/Email" if validate_email(email_mobile) else "Verify/Mobile"
@@ -56,6 +54,31 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
         if isinstance(redis_otp, bytes):
             redis_otp = redis_otp.decode('utf-8')
         return otp == redis_otp
+
+    @staticmethod
+    def is_user_exist(email_mobile):
+        try:
+            get_user_model().objects.get_user_with_mobile_or_mail(user_field=email_mobile)
+            return True
+        except CustomerUser.DoesNotExist:
+            return False
+
+    def post(self, request):
+        serializer = VerifyEmailMobileFieldSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if self.is_user_exist(serializer.validated_data['email_mobile']):
+            response_data = {'status': "error", 'data': '', 'message': _('User registered before')}
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+        if not self.is_valid_otp(serializer.validated_data['otp'], serializer.validated_data['email_mobile']):
+            response_data = {'status': "error", 'data': {'otp': [_('OTP is not valid')]},
+                             'message': 'Invalid Input'}
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"status": "ok", "message": _('OTP is valid')}, status=status.HTTP_200_OK)
+
+
+class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView, VerifyPreRegisterAPI):
+    singular_name = 'user'
+    serializer_class = UserRegistrationSerializer
 
     @staticmethod
     def create_jwt_authorization(user_id):

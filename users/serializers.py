@@ -8,8 +8,8 @@ import re
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     email_mobile = serializers.CharField(required=True, write_only=True)
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
     password = serializers.CharField(required=True, write_only=True)
     otp = serializers.CharField(required=True, write_only=True)
 
@@ -34,8 +34,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = get_user_model().objects.create(
             email=validated_data['email_mobile'] if is_email else None,
             mobile=validated_data['email_mobile'] if not is_email else None,
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
+            first_name=validated_data.get('first_name'),
+            last_name=validated_data.get('last_name'),
             is_active=False,
             is_verified_mobile=False,
             is_verified_email=False
@@ -152,6 +152,32 @@ class EmailMobileFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['email_mobile', ]
+
+
+class VerifyEmailMobileFieldSerializer(EmailMobileFieldSerializer):
+    email_mobile = serializers.CharField(required=True, write_only=True)
+    otp = serializers.CharField(required=True, write_only=True)
+
+    @staticmethod
+    def validate_email_mobile(value):
+        if validate_email(value):
+            return value.lower()
+        if validate_mobile(value):
+            return value
+        raise serializers.ValidationError(_('Invalid email/mobile format'))
+
+    def validate_otp(self, value):
+        # Perform validation logic here
+        if not isinstance(value, str):
+            raise serializers.ValidationError("Value must be an String.")
+        mobile_regex = r"^[0-9]{5,}$"
+        if re.match(mobile_regex, value) is not None:
+            return value
+        raise serializers.ValidationError(_('Invalid OTP format'))
+
+    class Meta:
+        model = get_user_model()
+        fields = ['email_mobile', 'otp', ]
 
 
 class VerifyEmailForgetPasswordSerializer(serializers.ModelSerializer):

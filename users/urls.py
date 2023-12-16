@@ -1,12 +1,13 @@
 from django.urls import path
 
-from users.views import PreRegisterAPI, RegisterAPI, VerifyEmailAPI, LoginApi, SendVerifyMobileAPI, SendVerifyEmailAPI, \
-    LogoutApi, \
+from users.views import PreRegisterAPI, VerifyPreRegisterAPI, RegisterAPI, VerifyEmailAPI, LoginApi, \
+    SendVerifyMobileAPI, SendVerifyEmailAPI, LogoutApi, \
     VerifyMobileApi, SendOtpLoginApi, VerifyOtpLoginApi, SendForgetPasswordApi, VerifyOtpForgetPasswordApi, \
     VerifyEmailForgetPasswordAPI, VerifyOTPEmailAPI
 
 urlpatterns = [
     path('auth/pre-register', PreRegisterAPI.as_view(), name='user_preregister'),
+    path('auth/verify-pre-register', VerifyPreRegisterAPI.as_view(), name='user_verify_preregister'),
     path('auth/register', RegisterAPI.as_view(), name='user_register'),
     path('auth/verify-email/<str:token>', VerifyEmailAPI.as_view(), name='user_verify_email'),
     path('auth/login', LoginApi.as_view(), name='user_login'),

@@ -95,6 +95,56 @@ class TestPreRegisterUser(TestCase):
         self.assertIn('User registered before', response_json['message'])
 
 
+class TestVerifyPreRegisterUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+
+    def test_url_exists(self):
+        response = self.client.post(
+            reverse('user_verify_preregister'), data=USER_VALID_DATA, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rejects_empty_data(self):
+        invalid_user_data = {}
+        response = self.client.post(
+            reverse('user_register'), data=invalid_user_data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('email_mobile', response_json['data'])
+        self.assertIn('otp', response_json['data'])
+
+    def test_verify_preregister_email(self):
+        with patch('users.utils.create_mobile_otp') as mock_create_otp:
+            mock_create_otp.return_value = '12345'
+            self.client.post(reverse('user_preregister'), data={'email_mobile': USER_VALID_DATA['email']},
+                             format='json')
+            valid_input_data = {
+                'email_mobile': USER_VALID_DATA['email'],
+                'otp': '12345',
+            }
+            response = self.client.post(reverse('user_verify_preregister'), data=valid_input_data, format='json')
+
+            response_json = response.json()
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response_json['status'], 'ok')
+
+    def test_verify_preregister_mobile(self):
+        with patch('users.utils.create_mobile_otp') as mock_create_otp:
+            mock_create_otp.return_value = '12345'
+            self.client.post(reverse('user_preregister'), data={'email_mobile': USER_VALID_DATA['mobile']},
+                             format='json')
+            valid_input_data = {
+                'email_mobile': USER_VALID_DATA['mobile'],
+                'otp': '12345',
+            }
+            response = self.client.post(reverse('user_verify_preregister'), data=valid_input_data, format='json')
+
+            response_json = response.json()
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response_json['status'], 'ok')
+
+
 class TestRegisterUser(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
@@ -112,9 +162,9 @@ class TestRegisterUser(TestCase):
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual('error', response_json['status'])
-        self.assertIn('first_name', response_json['data'])
+        # self.assertIn('first_name', response_json['data'])
         self.assertIn('email_mobile', response_json['data'])
-        self.assertIn('last_name', response_json['data'])
+        # self.assertIn('last_name', response_json['data'])
         self.assertIn('password', response_json['data'])
         self.assertIn('otp', response_json['data'])
 
@@ -174,8 +224,8 @@ class TestRegisterUser(TestCase):
                              format='json')
             valid_input_data = {
                 'email_mobile': USER_VALID_DATA['mobile'],
-                'first_name': USER_VALID_DATA['first_name'],
-                'last_name': USER_VALID_DATA['last_name'],
+                # 'first_name': USER_VALID_DATA['first_name'],
+                # 'last_name': USER_VALID_DATA['last_name'],
                 'password': USER_VALID_DATA['password'],
                 'otp': '12345',
             }
@@ -186,15 +236,15 @@ class TestRegisterUser(TestCase):
             self.assertEqual(response_json['status'], 'ok')
             self.assertEqual(response_json['data']['user']['email'], None)
             self.assertEqual(response_json['data']['user']['mobile'], USER_VALID_DATA['mobile'])
-            self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
-            self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
+            # self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
+            # self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
             self.assertIn('access_token', response_json['data'])
             self.assertIn('Bearer ', response_json['data']['access_token'])
 
             created_user = get_user_model().objects.filter(
                 mobile=USER_VALID_DATA['mobile'],
-                first_name=USER_VALID_DATA['first_name'],
-                last_name=USER_VALID_DATA['last_name'],
+                # first_name=USER_VALID_DATA['first_name'],
+                # last_name=USER_VALID_DATA['last_name'],
                 is_active=False,
             ).first()
             self.assertIsNotNone(created_user)
