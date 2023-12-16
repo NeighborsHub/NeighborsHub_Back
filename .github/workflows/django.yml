@@ -51,7 +51,7 @@ jobs:
             REMOTE_HOST: ${{ secrets.SERVER_HOST }}
             REMOTE_USER: ${{ secrets.SERVER_USERNAME }}
             SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-            script: |
+            SCRIPT_AFTER: |
               cd /var/django/NeighborsHub_Back &&
               git pull origin main &&
               venv/bin/python manage.py migrate &&
