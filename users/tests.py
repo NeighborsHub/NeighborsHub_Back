@@ -381,7 +381,7 @@ class TestLogoutUser(TestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_successful_logout(self):
-        self.client.login(username=self.user.email, password=USER_VALID_DATA['password'])
+        self.client.login(email=self.user.email, password=USER_VALID_DATA['password'])
         self.client.get(
             reverse('user_logout'), data={}, format='json')
         response = self.client.get(
@@ -661,7 +661,7 @@ class TestVerifyEmailForgetPasswordUser(TestCase):
             self.assertEqual('ok', response_json['status'])
             self.assertEqual('Password Changed', response_json['message'])
 
-            self.client.login(username=self.user.email, password=new_password)
+            self.client.login(email=self.user.email, password=new_password)
             response = self.client.get(
                 reverse('user_logout'), data={}, format='json')
             self.assertTrue(response.status_code, status.HTTP_200_OK)
