@@ -24,7 +24,7 @@ class CustomUserManager(BaseUserManager):
 
 
 class CustomerUser(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(unique=True, blank=True, null=True, validators=[validate_email])
+    email = models.EmailField(blank=True, null=True, validators=[validate_email])
     username = models.CharField(max_length=30, unique=True)
     mobile = models.CharField(max_length=15, unique=True, blank=True, null=True, validators=[validate_mobile])
     first_name = models.CharField(max_length=30)
