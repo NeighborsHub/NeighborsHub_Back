@@ -53,7 +53,10 @@ jobs:
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script: |
               sudo su -
+              whoami
               cd /var/django/NeighborsHub_Back 
+              ls -la
+              pwd
               git pull 
               venv/bin/python manage.py migrate 
               sudo systemctl restart django.service
