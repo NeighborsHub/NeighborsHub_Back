@@ -54,6 +54,6 @@ jobs:
             script: |
               sudo su &&
               cd /var/django/NeighborsHub_Back &&
-              git pull origin main &&
+              git pull &&
               venv/bin/python manage.py migrate &&
               sudo systemctl restart django.service
