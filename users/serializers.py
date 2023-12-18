@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from django.utils.translation import gettext as _
 from django.contrib.auth import get_user_model
+from rest_framework_gis.serializers import GeoModelSerializer
 
-from users.models import validate_email, validate_mobile
+from core.serializers import CitySerializer
+from users.models import validate_email, validate_mobile, Address
 import re
 
 
@@ -192,3 +194,35 @@ class VerifyOtpForgetPasswordSerializer(VerifyOtpMobileSerializer, VerifyEmailFo
     class Meta:
         model = get_user_model()
         fields = ['otp', 'mobile', 'password']
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ['first_name', 'last_name', 'email', 'mobile', 'id']
+
+
+class ListCreateAddressSerializer(GeoModelSerializer):
+    # user = UserSerializer(many=False, read_only=True)
+    street = serializers.CharField(required=False, max_length=255)
+    # city = CitySerializer(many=False, read_only=True)
+    zip_code = serializers.CharField(required=False)
+    is_main_address = serializers.BooleanField(required=False, default=False)
+
+    def create(self, validated_data):
+        address = Address.objects.create(
+            user_id=validated_data['user_id'],
+            street=validated_data.get('street'),
+            city_id=validated_data.get('city_id'),
+            zip_code=validated_data.get('zip_code'),
+            is_main_address=validated_data.get('is_main_address', False),
+
+        )
+        address.save()
+        return address
+
+    class Meta:
+        model = Address()
+        geometry_field = "point"
+        fields = ['user', 'city', 'id', 'street', 'zip_code', 'is_main_address', 'city_id', 'user_id']
+        read_only = ('point', )

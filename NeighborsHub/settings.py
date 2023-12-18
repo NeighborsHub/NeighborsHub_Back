@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django.contrib.gis',
+    'rest_framework_gis',
 
     # apps
     'core',

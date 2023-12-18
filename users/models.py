@@ -73,11 +73,11 @@ class Follow(BaseModel):
 
 
 class Address(BaseModel):
-    user = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT)
+    user = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT, unique=False)
     street = models.CharField(max_length=255, blank=True, null=True)
     city = models.ForeignKey(City, blank=True, null=True, on_delete=models.PROTECT)
     zip_code = models.CharField(max_length=10, blank=True, null=True)
-    is_main_address = models.BooleanField(default=False)
+    is_main_address = models.BooleanField(default=False, null=True, blank=True)
     point = models.PointField(null=True, blank=True)
 
 

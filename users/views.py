@@ -2,7 +2,7 @@ import datetime
 from rest_framework import status
 
 from NeighborsHub.custom_jwt import verify_custom_token, generate_auth_token
-from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin
+from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin
 from rest_framework import generics
 from django.utils.translation import gettext as _
 
@@ -10,11 +10,11 @@ from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExis
     IncorrectUsernamePasswordException
 from NeighborsHub.permission import CustomAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
-from users.models import CustomerUser, validate_email
+from users.models import CustomerUser, validate_email, Address
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
     VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
-    VerifyEmailMobileFieldSerializer
+    VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -385,3 +385,12 @@ class VerifyEmailForgetPasswordAPI(APIView):
             user.save()
             return Response(data={"status": "ok", "message": _('Password Changed')})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListCreateUserAddressAPI(ExpressiveCreateModelMixin, ExpressiveListModelMixin, generics.ListCreateAPIView):
+    authentication_classes = (CustomAuthentication,)
+    serializer_class = ListCreateAddressSerializer
+    queryset = Address.objects.filter()
+    # model = Address/
+    singular_name = 'address'
+

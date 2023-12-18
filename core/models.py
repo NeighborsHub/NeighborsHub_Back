@@ -1,4 +1,4 @@
-from django.db import models
+from django.contrib.gis.db import models
 
 
 # Create your models here.
@@ -61,8 +61,7 @@ class City(models.Model):
     name = models.CharField(max_length=100)
     name_code = models.CharField(max_length=50)
     population = models.PositiveIntegerField()
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    point = models.PointField(null=True, blank=True)
 
     state = models.ForeignKey(State, on_delete=models.CASCADE)
 

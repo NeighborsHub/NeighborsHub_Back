@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 
 from NeighborsHub.test_function import test_object_attributes_existence
+from core.models import City
 from users.models import CustomerUser, Address
 from rest_framework.test import APIClient
 
@@ -731,3 +732,31 @@ class TestAddressModel(TestCase):
         created_address = baker.make(Address)
         test_obj = Address.objects.filter(id=created_address.id).first()
         self.assertIsNotNone(test_obj)
+
+
+class TestCreateAddress(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.city = baker.make(City)
+
+    def test_exist_api(self):
+        response = self.client.get(
+            reverse('user_list_create_address'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejects_invalid_token(self):
+        self.client.force_authenticate(self.user)
+        data = {
+
+            'address': 'Iran- Tehran- ',
+            # 'city': {"id":self.city.id},
+            'is_main_address': False
+        }
+        response = self.client.post(reverse('user_list_create_address'), data=data, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # self.assertIn('error', response_json['status'])
+        # self.assertEqual('Token expired', response_json['message'])
+        # self.assertEqual('token_error', response_json['code'])
