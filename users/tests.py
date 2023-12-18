@@ -727,7 +727,7 @@ class TestAddressModel(TestCase):
         address = Address()
         test_object_attributes_existence(self, address, attributes)
 
-    def test_address_model_create_successfull(self):
+    def test_address_model_create_successful(self):
         created_address = baker.make(Address)
         test_obj = Address.objects.filter(id=created_address.id).first()
         self.assertIsNotNone(test_obj)
