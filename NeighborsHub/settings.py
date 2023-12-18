@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     # 3rd party
     'rest_framework',
     'corsheaders',
+    'django.contrib.gis',
 
     # apps
     'core',
@@ -85,8 +86,12 @@ WSGI_APPLICATION = 'NeighborsHub.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'HOST': '127.0.0.1',
+        'USER': 'root',
+        'PASSWORD': '123456',
+        'PORT': '5432',
+        'NAME': 'neighbors_hub_db',
     }
 }
 
@@ -141,3 +146,5 @@ JWT_AUTH_TIME_DELTA = 30  # days
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'NeighborsHub.exceptions.custom_exception_handler',
 }
+
+GDAL_LIBRARY_PATH = '/lib/libgdal.so'

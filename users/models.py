@@ -78,6 +78,8 @@ class Address(BaseModel):
     city = models.ForeignKey(City, blank=True, null=True, on_delete=models.PROTECT)
     zip_code = models.CharField(max_length=10, blank=True, null=True)
     is_main_address = models.BooleanField(default=False)
+    point = models.PointField(null=True, blank=True)
+
 
     def __str__(self):
         return (f"Address(id={self.id}, status={self.state}, user_id={self.user.id},  "

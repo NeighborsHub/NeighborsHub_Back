@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 
 from NeighborsHub.test_function import test_object_attributes_existence
-from users.models import CustomerUser
+from users.models import CustomerUser, Address
 from rest_framework.test import APIClient
 
 USER_VALID_DATA = {
@@ -715,3 +715,19 @@ class TestVerifyEmailForgetPasswordUser(TestCase):
             response = self.client.get(
                 reverse('user_logout'), data={}, format='json')
             self.assertTrue(response.status_code, status.HTTP_200_OK)
+
+
+class TestAddressModel(TestCase):
+    @staticmethod
+    def test_property_type_model_exists():
+        Address()
+
+    def test_property_type_model_has_all_required_attributes(self):
+        attributes = ['user_id', 'street', 'city', 'zip_code', 'is_main_address', 'point']
+        address = Address()
+        test_object_attributes_existence(self, address, attributes)
+
+    def test_address_model_create_successfull(self):
+        created_address = baker.make(Address)
+        test_obj = Address.objects.filter(id=created_address.id).first()
+        self.assertIsNotNone(test_obj)
