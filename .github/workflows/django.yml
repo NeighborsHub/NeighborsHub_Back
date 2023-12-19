@@ -32,7 +32,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         env:
-          POSTGRES_DB: mydatabase
+          POSTGRES_DB: neighbors_hub_db
           POSTGRES_USER: root
           POSTGRES_PASSWORD: 123456
           POSTGRES_INITDB_ARGS: "--data-checksums"
