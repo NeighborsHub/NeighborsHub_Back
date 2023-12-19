@@ -6,8 +6,11 @@ django-filter==23.5
 django-modeltranslation==0.18.11
 django-taggit==5.0.1
 djangorestframework==3.14.0
+djangorestframework-gis==1.0
 Markdown==3.5.1
 model-bakery==1.17.0
+postgis==1.0.4
+psycopg2-binary==2.9.9
 PyJWT==2.8.0
 pytz==2023.3.post1
 redis==5.0.1
