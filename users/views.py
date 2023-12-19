@@ -404,7 +404,7 @@ class ListCreateUserAddressAPI(ExpressiveCreateModelMixin, ExpressiveListModelMi
 
 
 class RetrieveUpdateUserAddressAPI(ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin,
-                                   generics.RetrieveUpdateAPIView):
+                                   generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = (CustomAuthentication, )
     permission_classes = (IsOwnerAuthentication, )
     serializer_class = ListCreateAddressSerializer
