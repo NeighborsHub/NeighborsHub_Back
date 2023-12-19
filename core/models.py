@@ -39,6 +39,9 @@ class Country(models.Model):
     name_code = models.CharField(max_length=50)
     population = models.PositiveIntegerField()
     capital = models.CharField(max_length=100)
+    location = models.PointField(null=True, blank=True)
+    phone_code = models.CharField(max_length=20, null=True, blank=True)
+    emoji = models.CharField(max_length=20, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -47,9 +50,9 @@ class Country(models.Model):
 class State(models.Model):
     name = models.CharField(max_length=100)
     name_code = models.CharField(max_length=50)
-    abbreviation = models.CharField(max_length=2, unique=True)
-    population = models.PositiveIntegerField()
-    capital = models.CharField(max_length=100)
+    abbreviation = models.CharField(max_length=10, unique=False)
+    capital = models.CharField(max_length=100, null=True, blank=True)
+    location = models.PointField(null=True, blank=True)
 
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
 
@@ -60,7 +63,7 @@ class State(models.Model):
 class City(models.Model):
     name = models.CharField(max_length=100)
     name_code = models.CharField(max_length=50)
-    population = models.PositiveIntegerField()
+    population = models.PositiveIntegerField(null=True, blank=True)
     location = models.PointField(null=True, blank=True)
 
     state = models.ForeignKey(State, on_delete=models.CASCADE)
