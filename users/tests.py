@@ -797,3 +797,65 @@ class TestCreateListAddress(TestCase):
         self.assertIn('previous', response_json['data']['addresses'])
         self.assertIn('results', response_json['data']['addresses'])
         self.assertEqual(5, len(response_json['data']['addresses']['results']))
+
+    def test_empty_list_for_other_user(self):
+        self.client.force_authenticate(self.user)
+        addresses = baker.make(Address, city=self.city, _quantity=5)
+        response = self.client.get(reverse('user_list_create_address'), data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(0, len(response_json['data']['addresses']['results']))
+
+
+class TestRetrieveUpdateAddress(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.city = baker.make(City)
+        self.address = baker.make(Address, user=self.user, city=self.city)
+
+    def test_exist_api(self):
+        response = self.client.get(
+            reverse('user_get_update_address', kwargs={'pk': self.address.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_reject_dummy_user(self):
+        dummy_user = baker.make(get_user_model())
+        self.client.force_authenticate(dummy_user)
+        response = self.client.get(
+            reverse('user_get_update_address', kwargs={'pk': self.address.id}), data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual('error', response_json['status'])
+
+    def test_successful_get_address(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(
+            reverse('user_get_update_address', kwargs={'pk': self.address.id}), data={}, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+
+    def test_successful_update_address(self):
+        data = {
+            "location": {"type": "Point", "coordinates": [-87.650175, 41.850385]},
+            'street': 'Iran- Tehran-',
+            'zip_code': '12345689',
+            'city_id': self.city.id,
+            'is_main_address': False,
+            'is_public': True,
+        }
+        self.client.force_authenticate(self.user)
+        response = self.client.put(
+            reverse('user_get_update_address', kwargs={'pk': self.address.id}), data=data, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertIn('type', response_json['data']['address']['location'])
+        self.assertIn('coordinates', response_json['data']['address']['location'])
+        self.assertEqual(data['street'], response_json['data']['address']['street'])
+        self.assertEqual(data['zip_code'], response_json['data']['address']['zip_code'])
+        self.assertEqual(data['is_main_address'], response_json['data']['address']['is_main_address'])
+        self.assertEqual(data['location']['coordinates'], response_json['data']['address']['location']['coordinates'])

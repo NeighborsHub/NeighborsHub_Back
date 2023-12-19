@@ -70,3 +70,9 @@ class ServerErrorException(CustomException):
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     default_code = 'Server Error'
     default_detail = _("Unsuported Exception")
+
+
+class ObjectNotFoundException(CustomException):
+    status_code = status.HTTP_404_NOT_FOUND
+    default_code = 'Not Found'
+    default_detail = _("Not found")

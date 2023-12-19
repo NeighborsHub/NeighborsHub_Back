@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from rest_framework import authentication
 from rest_framework import exceptions
 from django.utils.translation import gettext as _
+from rest_framework.permissions import BasePermission
 
 from NeighborsHub.custom_jwt import verify_custom_token
 from NeighborsHub.redis_management import AuthenticationTokenRedis
@@ -31,4 +32,9 @@ class CustomAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed(_('User does not exist'))
         return user, None
 
+
+class IsOwnerAuthentication(BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
 

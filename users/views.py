@@ -2,13 +2,14 @@ import datetime
 from rest_framework import status
 
 from NeighborsHub.custom_jwt import verify_custom_token, generate_auth_token
-from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin
+from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin, \
+    ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
 from rest_framework import generics
 from django.utils.translation import gettext as _
 
 from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExistAPIException, NotValidOTPAPIException, \
-    IncorrectUsernamePasswordException
-from NeighborsHub.permission import CustomAuthentication
+    IncorrectUsernamePasswordException, ObjectNotFoundException
+from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from users.models import CustomerUser, validate_email, Address
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
@@ -397,3 +398,23 @@ class ListCreateUserAddressAPI(ExpressiveCreateModelMixin, ExpressiveListModelMi
     def perform_create(self, serializer):
         address = serializer.save(user=self.request.user, city_id=serializer.validated_data['city_id'])
         return address
+
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)
+
+
+class RetrieveUpdateUserAddressAPI(ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin,
+                                   generics.RetrieveUpdateAPIView):
+    authentication_classes = (CustomAuthentication, )
+    permission_classes = (IsOwnerAuthentication, )
+    serializer_class = ListCreateAddressSerializer
+    queryset = Address.objects.filter()
+    singular_name = 'address'
+
+    def get_object(self):
+        try:
+            obj = Address.objects.get(pk=self.kwargs['pk'])
+            self.check_object_permissions(self.request, obj)
+        except Address.DoesNotExist:
+            raise ObjectNotFoundException
+        return obj

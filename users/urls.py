@@ -3,7 +3,7 @@ from django.urls import path
 from users.views import PreRegisterAPI, VerifyPreRegisterAPI, RegisterAPI, VerifyEmailAPI, LoginApi, \
     SendVerifyMobileAPI, SendVerifyEmailAPI, LogoutApi, \
     VerifyMobileApi, SendOtpLoginApi, VerifyOtpLoginApi, SendForgetPasswordApi, VerifyOtpForgetPasswordApi, \
-    VerifyEmailForgetPasswordAPI, VerifyOTPEmailAPI, ListCreateUserAddressAPI
+    VerifyEmailForgetPasswordAPI, VerifyOTPEmailAPI, ListCreateUserAddressAPI, RetrieveUpdateUserAddressAPI
 
 urlpatterns = [
     path('auth/pre-register', PreRegisterAPI.as_view(), name='user_preregister'),
@@ -23,7 +23,7 @@ urlpatterns = [
          name='verify_otp_forget_password'),
     path('auth/verify-email-forget-password/<str:token>', VerifyEmailForgetPasswordAPI.as_view(),
          name='verify_email_forget_password'),
-    path('me/address', ListCreateUserAddressAPI.as_view(),
-         name='user_list_create_address'),
+    path('me/address', ListCreateUserAddressAPI.as_view(), name='user_list_create_address'),
+    path('me/address/<int:pk>', RetrieveUpdateUserAddressAPI.as_view(), name='user_get_update_address'),
 
 ]
