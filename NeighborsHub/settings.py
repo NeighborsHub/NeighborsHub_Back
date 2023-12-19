@@ -90,7 +90,7 @@ DATABASES = {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'HOST': '127.0.0.1',
         'USER': 'root',
-        'PASSWORD': 't00r',
+        'PASSWORD': '12345',
         'PORT': '5432',
         'NAME': 'neighbors_hub_db',
     }
