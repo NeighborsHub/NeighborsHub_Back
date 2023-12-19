@@ -61,7 +61,7 @@ class City(models.Model):
     name = models.CharField(max_length=100)
     name_code = models.CharField(max_length=50)
     population = models.PositiveIntegerField()
-    point = models.PointField(null=True, blank=True)
+    location = models.PointField(null=True, blank=True)
 
     state = models.ForeignKey(State, on_delete=models.CASCADE)
 

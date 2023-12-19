@@ -146,6 +146,8 @@ JWT_AUTH_TIME_DELTA = 30  # days
 
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'NeighborsHub.exceptions.custom_exception_handler',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE' : 10
 }
 
 GDAL_LIBRARY_PATH = '/lib/libgdal.so'

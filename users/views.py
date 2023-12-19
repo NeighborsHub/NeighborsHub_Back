@@ -391,6 +391,9 @@ class ListCreateUserAddressAPI(ExpressiveCreateModelMixin, ExpressiveListModelMi
     authentication_classes = (CustomAuthentication,)
     serializer_class = ListCreateAddressSerializer
     queryset = Address.objects.filter()
-    # model = Address/
     singular_name = 'address'
+    plural_name = 'addresses'
 
+    def perform_create(self, serializer):
+        address = serializer.save(user=self.request.user, city_id=serializer.validated_data['city_id'])
+        return address

@@ -724,7 +724,7 @@ class TestAddressModel(TestCase):
         Address()
 
     def test_property_type_model_has_all_required_attributes(self):
-        attributes = ['user_id', 'street', 'city', 'zip_code', 'is_main_address', 'point']
+        attributes = ['user_id', 'street', 'city', 'zip_code', 'is_main_address', 'location', 'is_public', ]
         address = Address()
         test_object_attributes_existence(self, address, attributes)
 
@@ -734,7 +734,7 @@ class TestAddressModel(TestCase):
         self.assertIsNotNone(test_obj)
 
 
-class TestCreateAddress(TestCase):
+class TestCreateListAddress(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.user = _create_user()
@@ -745,18 +745,55 @@ class TestCreateAddress(TestCase):
             reverse('user_list_create_address'), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_rejects_invalid_token(self):
+    def test_successful_create_address(self):
         self.client.force_authenticate(self.user)
         data = {
-
-            'address': 'Iran- Tehran- ',
-            # 'city': {"id":self.city.id},
-            'is_main_address': False
+            "location": {"type": "Point", "coordinates": [-87.650175, 41.850385]},
+            'street': 'Iran- Tehran-',
+            'zip_code': '12345689',
+            'city_id': self.city.id,
+            'is_main_address': False,
+            'is_public': True,
         }
         response = self.client.post(reverse('user_list_create_address'), data=data, format='json')
         response_json = response.json()
-        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('ok', response_json['status'])
+        self.assertIn('user', response_json['data']['address'])
+        self.assertIn('city', response_json['data']['address'])
+        self.assertIn('first_name', response_json['data']['address']['user'])
+        self.assertIn('last_name', response_json['data']['address']['user'])
+        self.assertIn('email', response_json['data']['address']['user'])
+        self.assertIn('mobile', response_json['data']['address']['user'])
+        self.assertIn('id', response_json['data']['address']['user'])
+        self.assertIn('id', response_json['data']['address']['city'])
+        self.assertIn('name', response_json['data']['address']['city'])
+        self.assertIn('name_code', response_json['data']['address']['city'])
+        self.assertIn('population', response_json['data']['address']['city'])
+        self.assertIn('population', response_json['data']['address']['city'])
+        self.assertIn('location', response_json['data']['address']['city'])
+        self.assertIn('type', response_json['data']['address']['location'])
+        self.assertIn('coordinates', response_json['data']['address']['location'])
+        self.assertEqual(data['street'], response_json['data']['address']['street'])
+        self.assertEqual(data['zip_code'], response_json['data']['address']['zip_code'])
+        self.assertEqual(data['is_main_address'], response_json['data']['address']['is_main_address'])
+        self.assertEqual(data['location']['coordinates'], response_json['data']['address']['location']['coordinates'])
+
+    def test_exists_list(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('user_list_create_address'), data={}, format='json')
+        response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertIn('error', response_json['status'])
-        # self.assertEqual('Token expired', response_json['message'])
-        # self.assertEqual('token_error', response_json['code'])
+
+    def test_successful_pagination(self):
+        self.client.force_authenticate(self.user)
+        addresses = baker.make(Address, user=self.user, city=self.city, _quantity=5)
+        response = self.client.get(reverse('user_list_create_address'), data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('ok', response_json['status'])
+        self.assertIn('count', response_json['data']['addresses'])
+        self.assertIn('next', response_json['data']['addresses'])
+        self.assertIn('previous', response_json['data']['addresses'])
+        self.assertIn('results', response_json['data']['addresses'])
+        self.assertEqual(5, len(response_json['data']['addresses']['results']))

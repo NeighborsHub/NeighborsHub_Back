@@ -7,5 +7,5 @@ from core.models import City
 class CitySerializer(serializers.ModelSerializer):
     class Meta:
         model = City()
-        geo_field = "point"
-        fields = ['name', 'name_code', 'population', 'point', 'id']
+        geo_field = "location"
+        fields = ['name', 'name_code', 'population', 'location', 'id']
