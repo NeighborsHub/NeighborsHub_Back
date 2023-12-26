@@ -24,13 +24,16 @@ class Hashtag(models.Model):
 
 class BaseModel(models.Model):
     state = models.ForeignKey(States, null=True, blank=True, on_delete=models.PROTECT)
-    hashtags = models.ManyToManyField(Hashtag, null=True, blank=True)
+    hashtags = models.ManyToManyField(Hashtag, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey("users.CustomerUser", null=True, blank=True, on_delete=models.PROTECT,
-                                   related_name="created_by")
+                                   related_name='%(class)ss_created_by')
     updated_by = models.ForeignKey("users.CustomerUser", null=True, blank=True, on_delete=models.PROTECT,
-                                   related_name="updated_by")
+                                   related_name="%(class)ss_updated_by")
+
+    class Meta:
+        abstract = True
 
 
 class Country(models.Model):

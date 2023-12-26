@@ -4,6 +4,7 @@ from django.db import models
 
 from albums.models import Media
 from core.models import BaseModel, Hashtag
+from users.models import Address
 
 
 # Create your models here.
@@ -13,6 +14,7 @@ class Post(BaseModel):
     title = models.CharField(max_length=255)
     body = models.TextField()
     media = models.ManyToManyField(Media, null=True, blank=True)
+    address = models.ForeignKey(Address, related_name='post_address', on_delete=models.DO_NOTHING)
 
     def extract_hashtags(self):
         hashtags = re.findall(r'#(\w+)', self.body)
@@ -34,8 +36,8 @@ class Post(BaseModel):
 
 class Comment(BaseModel):
     body = models.TextField()
-    post = models.ForeignKey(Post, on_delete=models.PROTECT)
-    reply_to = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True)
+    post = models.ForeignKey(Post, on_delete=models.DO_NOTHING, related_name='comment_post')
+    reply_to = models.ForeignKey('self', on_delete=models.DO_NOTHING, null=True, blank=True)
 
     def __str__(self):
         return (f"Comment(id={self.id}, body={self.body}, state={self.state},"

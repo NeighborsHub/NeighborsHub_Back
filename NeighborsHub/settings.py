@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     # apps
     'core',
     'users',
-    'albums'
+    'albums',
+    'post',
 ]
 
 MIDDLEWARE = [
