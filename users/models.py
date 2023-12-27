@@ -8,6 +8,7 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Permi
 from django.db.models import Q
 from django.contrib.auth.models import BaseUserManager
 
+from NeighborsHub.exceptions import NotOwnAddressException
 from core.models import BaseModel, City, States, Hashtag
 
 
@@ -105,6 +106,13 @@ class Address(BaseModel):
     is_main_address = models.BooleanField(default=False, null=True, blank=True)
     location = models.PointField(null=True, blank=True)
     is_public = models.BooleanField(default=True)
+
+    def is_user_owner(self, user, raise_exception=False):
+        is_owner = self.user == user
+        if raise_exception and not is_owner:
+            raise NotOwnAddressException
+        return is_owner
+
 
     def __str__(self):
         return (f"Address(id={self.id}, status={self.state}, user_id={self.user.id},  "

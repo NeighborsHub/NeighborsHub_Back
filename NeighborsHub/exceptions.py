@@ -76,3 +76,9 @@ class ObjectNotFoundException(CustomException):
     status_code = status.HTTP_404_NOT_FOUND
     default_code = 'Not Found'
     default_detail = _("Not found")
+
+
+class NotOwnAddressException(CustomException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_code = 'Invalid input'
+    default_detail = {'address_id': _("Invalid address.")}
