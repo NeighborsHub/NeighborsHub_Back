@@ -5,9 +5,10 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 
 from NeighborsHub.test_function import test_object_attributes_existence
+from albums.models import Media
 from core.models import Hashtag
 from post.models import Post
-from users.models import Address
+from users.models import Address, CustomerUser
 from users.tests import _create_user
 from rest_framework.test import APIClient
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -66,16 +67,14 @@ class TestCreatePost(TestCase):
 
     def test_successful_create_post(self):
         media_file1 = SimpleUploadedFile("media.jpg", b"file_content....", content_type="image/jpeg")
+        media_file2 = SimpleUploadedFile("media.jpg", b"file_content....", content_type="image/jpeg")
 
         valid_data = {
             'title': 'Lorem Ipsum',
             'body': '#Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut '
-                    '#labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco '
-                    ' laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit '
-                    ' in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat '
-                    ' cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
+                    '#labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco ',
             'address_id': self.address.id,
-            'medias': [media_file1],
+            'medias': [media_file1, media_file2],
         }
         self.client.force_authenticate(self.user)
         response = self.client.post(reverse('user_post_create'), valid_data, format='multipart')
@@ -83,5 +82,44 @@ class TestCreatePost(TestCase):
         print(response_json)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual('ok', response_json['status'])
-        self.assertIn(valid_data['title'], response_json['data'])
-        self.assertIn(valid_data['body'], response_json['data'])
+        self.assertIn('post', response_json['data'])
+        self.assertIn('address', response_json['data']['post'])
+        self.assertIn('title', response_json['data']['post'])
+        self.assertIn('body', response_json['data']['post'])
+        self.assertIn('created_at', response_json['data']['post'])
+        self.assertIn('media', response_json['data']['post'])
+
+        self.assertEqual(len(valid_data['medias']), Media.objects.all().count())
+        self.assertEqual(2, Hashtag.objects.all().count())
+        self.assertEqual(1, Post.objects.all().count())
+
+
+class TestMyListPost(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.address = baker.make(Address, user=self.user)
+
+    def test_api_exists_forbidden_anonymous(self):
+        response = self.client.get(reverse('user_post_list'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_successful_api(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('user_post_list'), data={}, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+
+    def test_user_can_see_own_post(self):
+        dummy_user = baker.make(CustomerUser)
+        baker.make(Post, created_by=dummy_user, _quantity=10)
+        baker.make(Post, created_by=self.user, _quantity=1)
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('user_post_list'), data={}, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(1, response_json['data']['posts']['count'])

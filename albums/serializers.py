@@ -8,6 +8,7 @@ from users.serializers import UserSerializer, ListCreateAddressSerializer
 
 class MediaSerializer(serializers.ModelSerializer):
     file = serializers.FileField(required=True)
+
     class Meta:
         model = Media
         fields = ('id', 'file', 'created_at')

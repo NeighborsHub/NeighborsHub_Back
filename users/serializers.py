@@ -219,7 +219,6 @@ class ListCreateAddressSerializer(GeoModelSerializer):
 class AddressSerializer(GeoModelSerializer):
     street = serializers.CharField(required=False, max_length=255)
     city = CitySerializer(many=False, read_only=True)
-    city_id = serializers.IntegerField(required=False, write_only=True)
     zip_code = serializers.CharField(required=False)
     is_main_address = serializers.BooleanField(required=False, default=False)
 

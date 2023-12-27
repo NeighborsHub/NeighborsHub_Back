@@ -1,11 +1,13 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, serializers
+from rest_framework.filters import SearchFilter
 from rest_framework.parsers import FormParser, MultiPartParser
 
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin
 from NeighborsHub.exceptions import NotOwnAddressException
 from NeighborsHub.permission import CustomAuthentication
 from post.models import Post
-from post.serializers import CreatePostSerializer
+from post.serializers import CreatePostSerializer, MyListPostSerializer
 from users.models import Address
 
 
@@ -22,3 +24,17 @@ class CreateUserPostAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
         address = serializer.save(user=self.request.user)
         return address
 
+
+class ListUserPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    authentication_classes = (CustomAuthentication,)
+    serializer_class = MyListPostSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    queryset = Post.objects.all()
+    filterset_fields = ['address_id', ]
+    search_fields = ['title', 'body']
+
+
+    plural_name = 'posts'
+
+    def get_queryset(self):
+        return Post.objects.filter(created_by=self.request.user)
