@@ -154,4 +154,4 @@ REST_FRAMEWORK = {
 GDAL_LIBRARY_PATH = '/lib/libgdal.so'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+MEDIA_ROOT = os.path.join(BASE_DIR, '')
