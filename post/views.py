@@ -37,7 +37,7 @@ class ListUserPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     plural_name = 'posts'
 
     def get_queryset(self):
-        return Post.objects.f
+        return Post.objects.filter(created_by=self.request.user)
 
 
 class RetrieveUpdateDeleteUserPostAPI(ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin,

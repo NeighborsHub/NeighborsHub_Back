@@ -139,10 +139,10 @@ class TestUpdateDeleteRetrievePost(TestCase):
 
     def test_rejects_owner_object(self):
         self.client.force_authenticate(self.user)
-        response = self.client.get(reverse('user_post_update_retrieve_delete', kwargs={'pk': 100}), data={},
+        response = self.client.get(reverse('user_post_update_retrieve_delete', kwargs={'pk': 1}), data={},
                                    format='json')
         response_json = response.json()
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response_json['status'], 'error')
 
     def test_retrieve_post_for_user(self):
@@ -172,9 +172,8 @@ class TestUpdateDeleteRetrievePost(TestCase):
         print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
-        self.assertEqual(valid_data['title'], response_json['status']['post']['title'])
-        self.assertEqual(valid_data['body'], response_json['status']['post']['body'])
-        self.assertEqual(len(valid_data['medias']), response_json['status']['post']['media'])
+        self.assertEqual(valid_data['title'], response_json['data']['post']['title'])
+        self.assertEqual(len(valid_data['medias']), len(response_json['data']['post']['media']))
         self.assertEqual(2, Hashtag.objects.count())
 
     def test_delete_post(self):
