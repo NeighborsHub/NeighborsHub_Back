@@ -3,17 +3,18 @@ from rest_framework import generics, serializers
 from rest_framework.filters import SearchFilter
 from rest_framework.parsers import FormParser, MultiPartParser
 
-from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin
-from NeighborsHub.exceptions import NotOwnAddressException
-from NeighborsHub.permission import CustomAuthentication
+from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin, \
+    ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
+from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundException
+from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from post.models import Post
-from post.serializers import CreatePostSerializer, MyListPostSerializer
+from post.serializers import PostSerializer, MyListPostSerializer
 from users.models import Address
 
 
 class CreateUserPostAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
     authentication_classes = (CustomAuthentication,)
-    serializer_class = CreatePostSerializer
+    serializer_class = PostSerializer
     queryset = Post.objects.all()
     singular_name = 'post'
 
@@ -33,8 +34,24 @@ class ListUserPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     filterset_fields = ['address_id', ]
     search_fields = ['title', 'body']
 
-
     plural_name = 'posts'
 
     def get_queryset(self):
-        return Post.objects.filter(created_by=self.request.user)
+        return Post.objects.f
+
+
+class RetrieveUpdateDeleteUserPostAPI(ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin,
+                                generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = (CustomAuthentication,)
+    permission_classes = (IsOwnerAuthentication,)
+    serializer_class = PostSerializer
+    singular_name = 'post'
+    queryset = Post.objects.all()
+
+    def get_object(self):
+        try:
+            obj = Post.objects.get(pk=self.kwargs['pk'])
+            self.check_object_permissions(self.request, obj)
+        except Post.DoesNotExist:
+            raise ObjectNotFoundException
+        return obj

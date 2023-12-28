@@ -14,7 +14,7 @@ class TruncatedTextField(serializers.CharField):
         return data
 
 
-class CreatePostSerializer(serializers.ModelSerializer):
+class PostSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True)
     address_id = serializers.IntegerField(required=True, write_only=True)
     title = serializers.CharField(max_length=100, allow_null=True)
@@ -38,6 +38,19 @@ class CreatePostSerializer(serializers.ModelSerializer):
             post.media.add(media_instance)
 
         return post
+
+    def update(self, instance, validated_data):
+        medias_data = validated_data.pop('medias') if 'medias' in validated_data else []
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        for file in medias_data:
+            media_instance = Media.objects.create(file=file,
+                                                  created_by=instance.created_by,
+                                                  updated_by=instance.created_by)
+            instance.media.add(media_instance)
+        return instance
 
     class Meta:
         model = Post
