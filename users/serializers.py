@@ -214,3 +214,15 @@ class ListCreateAddressSerializer(GeoModelSerializer):
         model = Address
         geometry_field = "location"
         fields = ['user', 'city', 'id', 'street', 'zip_code', 'is_main_address', 'city_id', 'user_id', 'location']
+
+
+class AddressSerializer(GeoModelSerializer):
+    street = serializers.CharField(required=False, max_length=255)
+    city = CitySerializer(many=False, read_only=True)
+    zip_code = serializers.CharField(required=False)
+    is_main_address = serializers.BooleanField(required=False, default=False)
+
+    class Meta:
+        model = Address
+        geometry_field = "location"
+        fields = ['city', 'id', 'street', 'zip_code', 'is_main_address', 'location']

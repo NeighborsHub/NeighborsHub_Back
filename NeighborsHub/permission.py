@@ -7,7 +7,7 @@ from rest_framework.permissions import BasePermission
 
 from NeighborsHub.custom_jwt import verify_custom_token
 from NeighborsHub.redis_management import AuthenticationTokenRedis
-from users.models import CustomerUser
+from users.models import CustomerUser, Address
 
 
 class CustomAuthentication(authentication.BaseAuthentication):
@@ -36,5 +36,8 @@ class CustomAuthentication(authentication.BaseAuthentication):
 class IsOwnerAuthentication(BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        return obj.user == request.user
+        if isinstance(obj, Address):
+            return obj.user == request.user
+        else:
+            return obj.created_by == request.user
 
