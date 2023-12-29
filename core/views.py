@@ -4,11 +4,9 @@ from rest_framework import generics
 from rest_framework.filters import SearchFilter
 
 from NeighborsHub.custom_view_mixin import ExpressiveListModelMixin
-from core.models import Country, State, City
-from core.serializers import CountrySerializer, StateSerializer, CitySerializer
+from core.models import Country, State, City, Hashtag
+from core.serializers import CountrySerializer, StateSerializer, CitySerializer, HashtagSerializer
 
-
-# Create your views here.
 
 class ListCountryView(ExpressiveListModelMixin, generics.ListAPIView):
     plural_name = "countries"
@@ -35,4 +33,10 @@ class ListCityView(ExpressiveListModelMixin, generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ['state_id', 'state__country_id']
     search_fields = ['name']
+
+
+class ListHashtagsView(ExpressiveListModelMixin, generics.ListAPIView):
+    plural_name = "hashtags"
+    queryset = Hashtag.objects.all()
+    serializer_class = HashtagSerializer
 

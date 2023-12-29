@@ -5,7 +5,8 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
 from NeighborsHub.test_function import test_object_attributes_existence
-from core.models import Country, State, City
+from core.models import Country, State, City, Hashtag
+from post.models import Post
 
 
 class TestCountryModel(TestCase):
@@ -116,9 +117,30 @@ class TestListCity(TestCase):
 
     def test_successful_filter(self):
         response = self.client.get(reverse('core_list_city'),
-                                   {'state_id': self.state.id, 'state__country_id':self.state.country_id
+                                   {'state_id': self.state.id, 'state__country_id': self.state.country_id
                                     },
                                    format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('ok', response_json['status'])
+
+
+class TestListHashtags(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        baker.make(Hashtag, hashtag_title='hello')
+        baker.make(Post, _quantity=10, body='#hello')
+
+    def test_exist_api(self):
+        response = self.client.get(reverse('core_list_hashtags'), format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_successful(self):
+        response = self.client.get(reverse('core_list_hashtags'), format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('ok', response_json['status'])
+        self.assertEqual(1, len(response_json['data']['hashtags']['results']))
+        self.assertEqual('hello', response_json['data']['hashtags']['results'][0]['hashtag_title'])
+        self.assertEqual(10, response_json['data']['hashtags']['results'][0]['count'])
+

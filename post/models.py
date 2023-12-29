@@ -14,6 +14,7 @@ class PostManager(models.Manager):
 
 
 class Post(BaseModel):
+    hashtags = models.ManyToManyField(Hashtag, blank=True, through='PostHashtag')
     title = models.CharField(max_length=255)
     body = models.TextField()
     media = models.ManyToManyField(Media, null=True, blank=True)
@@ -71,3 +72,9 @@ class LikePost(Like):
 
 class LikeComment(Like):
     comment = models.ForeignKey('Comment', on_delete=models.CASCADE, related_name='comment_likes')
+
+
+class PostHashtag(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    hashtag = models.ForeignKey(Hashtag, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
