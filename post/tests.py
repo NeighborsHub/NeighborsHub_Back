@@ -1,3 +1,4 @@
+from django.contrib.gis.geos import Point
 from django.template.defaulttags import lorem
 from django.test import TestCase
 from model_bakery import baker
@@ -169,7 +170,6 @@ class TestUpdateDeleteRetrievePost(TestCase):
         response = self.client.put(reverse('user_post_update_retrieve_delete', kwargs={'pk': post.id}),
                                    data=valid_data, format='multipart')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(valid_data['title'], response_json['data']['post']['title'])
@@ -180,6 +180,43 @@ class TestUpdateDeleteRetrievePost(TestCase):
         post = baker.make(Post, created_by=self.user)
         self.client.force_authenticate(self.user)
         response = self.client.delete(reverse('user_post_update_retrieve_delete', kwargs={'pk': post.id}),
-                                   data={}, format='multipart')
+                                      data={}, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIsNone(Post.objects.filter(id=post.id).first())
+
+
+class TestListPost(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        post_address = baker.make(Address, location=Point(-75.5673, 40.5432), )
+        dummy_address = baker.make(Address, location=Point(-79.5680, 41.5435), )
+        baker.make(Post, address=post_address, _quantity=2, body="#hello_world")
+        baker.make(Post, address=dummy_address, _quantity=10)
+
+    def test_api_exists(self):
+        response = self.client.get(reverse('post_list'), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_user_can_paginated_post(self):
+        response = self.client.get(reverse('post_list', ), data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(10, response_json['data']['posts']['count'])
+
+    def test_user_can_see_neighbors_posts(self):
+        params = {'longitude': -75.5673, 'latitude': 40.5432, 'distance': 100}
+        response = self.client.get(reverse('post_list'), data=params, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(2, response_json['data']['posts']['count'])
+
+    def test_user_can_filter_by_hashtag(self):
+        params = {'hashtags__hashtag_title': 'hello_world'}
+        response = self.client.get(reverse('post_list'), data=params, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(2, response_json['data']['posts']['count'])

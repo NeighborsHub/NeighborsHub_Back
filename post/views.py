@@ -1,7 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics, serializers
+from rest_framework import generics
 from rest_framework.filters import SearchFilter
-from rest_framework.parsers import FormParser, MultiPartParser
 
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin, \
     ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
@@ -10,6 +9,7 @@ from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from post.models import Post
 from post.serializers import PostSerializer, MyListPostSerializer
 from users.models import Address
+from django.contrib.gis.geos import Point
 
 
 class CreateUserPostAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
@@ -41,7 +41,7 @@ class ListUserPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
 
 
 class RetrieveUpdateDeleteUserPostAPI(ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin,
-                                generics.RetrieveUpdateDestroyAPIView):
+                                      generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = (CustomAuthentication,)
     permission_classes = (IsOwnerAuthentication,)
     serializer_class = PostSerializer
@@ -55,3 +55,22 @@ class RetrieveUpdateDeleteUserPostAPI(ExpressiveUpdateModelMixin, ExpressiveRetr
         except Post.DoesNotExist:
             raise ObjectNotFoundException
         return obj
+
+
+class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    serializer_class = MyListPostSerializer
+    queryset = Post.objects.all()
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['address_id', 'hashtags__hashtag_title']
+    search_fields = ['title', 'body']
+    plural_name = 'posts'
+
+    def get_queryset(self):
+        if (self.request.query_params.get('latitude') is not None and
+                self.request.query_params.get('longitude') is not None):
+            user_location = Point(float(self.request.query_params.get('longitude')),
+                                  float(self.request.query_params.get('latitude')),
+                                  srid=4326)
+            return Post.objects.filter_post_distance_of_location(user_location,
+                                                                 distance=int(self.request.query_params.get('distance')))
+        return Post.objects.all()

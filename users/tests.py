@@ -833,7 +833,6 @@ class TestRetrieveUpdateAddress(TestCase):
         response = self.client.get(
             reverse('user_get_update_address', kwargs={'pk': self.address.id}), data={}, format='json')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual('ok', response_json['status'])
 
@@ -850,7 +849,6 @@ class TestRetrieveUpdateAddress(TestCase):
         response = self.client.put(
             reverse('user_get_update_address', kwargs={'pk': self.address.id}), data=data, format='json')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual('ok', response_json['status'])
         self.assertIn('type', response_json['data']['address']['location'])
