@@ -1,3 +1,5 @@
+import datetime
+
 from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
@@ -40,3 +42,9 @@ class ListHashtagsView(ExpressiveListModelMixin, generics.ListAPIView):
     queryset = Hashtag.objects.all()
     serializer_class = HashtagSerializer
 
+    def get_queryset(self):
+        from_days = self.request.query_params.get('from_days', None)
+        if from_days is not None:
+            from_datetime = datetime.datetime.now() - datetime.timedelta(days=int(from_days))
+            return Hashtag.objects.filter(created_at__gte=from_datetime)
+        return Hashtag.objects.all()

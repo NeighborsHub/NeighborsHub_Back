@@ -1,5 +1,6 @@
+import datetime
+
 from rest_framework import serializers
-from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
 from core.models import City, Country, State, Hashtag
 
@@ -29,8 +30,11 @@ class HashtagSerializer(serializers.ModelSerializer):
     count = serializers.SerializerMethodField('get_count_hashtags')
 
     def get_count_hashtags(self, obj):
-        qs = obj.post_set.all().count()
-        return qs
+        from_days = self.context['request'].query_params.get('from_days')
+        if from_days is not None:
+            from_datetime = datetime.datetime.now() - datetime.timedelta(days=int(from_days))
+            return obj.post_set.filter(created_at__gte=from_datetime).count()
+        return obj.post_set.all().count()
 
     class Meta:
         model = Hashtag
