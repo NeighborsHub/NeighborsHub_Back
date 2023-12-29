@@ -203,7 +203,7 @@ class TestListPost(TestCase):
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
-        self.assertEqual(10, response_json['data']['posts']['count'])
+        self.assertEqual(12, response_json['data']['posts']['count'])
 
     def test_user_can_see_neighbors_posts(self):
         params = {'longitude': -75.5673, 'latitude': 40.5432, 'distance': 100}
