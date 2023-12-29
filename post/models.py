@@ -29,9 +29,10 @@ class Post(BaseModel):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
-        hashtags = self.extract_hashtags()
+        hashtags = [hashtag.lower() for hashtag in self.extract_hashtags()]
+        self.posthashtag_set.exclude(hashtag__hashtag_title__in=hashtags).delete()
         for tag in hashtags:
-            hashtag, created = Hashtag.objects.get_or_create(hashtag_title=tag.lower())
+            hashtag, created = Hashtag.objects.get_or_create(hashtag_title=tag)
             self.hashtags.add(hashtag)
 
     def __str__(self):
@@ -78,3 +79,6 @@ class PostHashtag(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     hashtag = models.ForeignKey(Hashtag, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"PostHashtag(post={self.post_id} , title={self.hashtag.hashtag_title}, created_at={self.created_at})"

@@ -1,3 +1,5 @@
+import time
+
 from django.contrib.gis.geos import Point
 from django.template.defaulttags import lorem
 from django.test import TestCase
@@ -8,7 +10,7 @@ from rest_framework.reverse import reverse
 from NeighborsHub.test_function import test_object_attributes_existence
 from albums.models import Media
 from core.models import Hashtag
-from post.models import Post
+from post.models import Post, PostHashtag
 from users.models import Address, CustomerUser
 from users.tests import _create_user
 from rest_framework.test import APIClient
@@ -156,7 +158,7 @@ class TestUpdateDeleteRetrievePost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
 
     def test_update_post(self):
-        post = baker.make(Post, created_by=self.user)
+        post = baker.make(Post, created_by=self.user, body="#Hello_World")
         media_file1 = SimpleUploadedFile("media.jpg", b"file_content....", content_type="image/jpeg")
         media_file2 = SimpleUploadedFile("media.jpg", b"file_content....", content_type="image/jpeg")
         valid_data = {
@@ -174,7 +176,8 @@ class TestUpdateDeleteRetrievePost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(valid_data['title'], response_json['data']['post']['title'])
         self.assertEqual(len(valid_data['medias']), len(response_json['data']['post']['media']))
-        self.assertEqual(2, Hashtag.objects.count())
+        self.assertEqual(2, PostHashtag.objects.filter(post_id=post.id).count())
+        self.assertEqual(3, Hashtag.objects.count())
 
     def test_delete_post(self):
         post = baker.make(Post, created_by=self.user)
