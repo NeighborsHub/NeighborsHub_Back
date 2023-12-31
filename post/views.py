@@ -6,6 +6,7 @@ from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, Expressiv
     ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
 from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundException
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
+from post.filters import ListPostFilter
 from post.models import Post, Comment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer
 from users.models import Address
@@ -61,8 +62,7 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     serializer_class = MyListPostSerializer
     queryset = Post.objects.all()
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['address_id', 'hashtags__hashtag_title']
-    search_fields = ['title', 'body']
+    filterset_class = ListPostFilter
     plural_name = 'posts'
 
     def get_queryset(self):

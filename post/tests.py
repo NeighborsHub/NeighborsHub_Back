@@ -217,7 +217,7 @@ class TestListPost(TestCase):
         self.assertEqual(2, response_json['data']['posts']['count'])
 
     def test_user_can_filter_by_hashtag(self):
-        params = {'hashtags__hashtag_title': 'hello_world'}
+        params = {'hashtag_title': 'hello_world'}
         response = self.client.get(reverse('post_list'), data=params, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
