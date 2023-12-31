@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from albums.models import Media
 from albums.serializers import MediaSerializer
-from post.models import Post
+from post.models import Post, Comment
 from users.models import Address
 from users.serializers import UserSerializer, AddressSerializer
 
@@ -73,3 +73,18 @@ class MyListPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('id', 'created_by', 'address', 'body', 'title', 'media',)
+
+
+class CommentSerializer(serializers.ModelSerializer):
+
+    def create(self, validated_data):
+        user = validated_data.pop('user')
+        post = validated_data.pop('post')
+        comment = Comment.objects.create(**validated_data,
+                                         post=post, created_by=user, updated_by=user)
+        comment.save()
+        return comment
+
+    class Meta:
+        model = Comment
+        fields = ('id', 'body', 'created_at', 'created_by', 'updated_at')

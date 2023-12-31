@@ -43,8 +43,23 @@ class Post(BaseModel):
 
 class Comment(BaseModel):
     body = models.TextField()
+    hashtags = models.ManyToManyField(Hashtag, blank=True, through='CommentHashtag')
+
     post = models.ForeignKey(Post, on_delete=models.DO_NOTHING, related_name='comment_post')
     reply_to = models.ForeignKey('self', on_delete=models.DO_NOTHING, null=True, blank=True)
+
+    def extract_hashtags(self):
+        hashtags = re.findall(r'#(\w+)', self.body)
+        return hashtags
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        hashtags = [hashtag.lower() for hashtag in self.extract_hashtags()]
+        self.commenthashtag_set.exclude(hashtag__hashtag_title__in=hashtags).delete()
+        for tag in hashtags:
+            hashtag, created = Hashtag.objects.get_or_create(hashtag_title=tag)
+            self.hashtags.add(hashtag)
 
     def __str__(self):
         return (f"Comment(id={self.id}, body={self.body}, state={self.state},"
@@ -82,3 +97,12 @@ class PostHashtag(models.Model):
 
     def __str__(self):
         return f"PostHashtag(post={self.post_id} , title={self.hashtag.hashtag_title}, created_at={self.created_at})"
+
+
+class CommentHashtag(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
+    hashtag = models.ForeignKey(Hashtag, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"CommentHashtag(post={self.comment} , title={self.hashtag.hashtag_title}, created_at={self.created_at})"
