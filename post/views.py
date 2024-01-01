@@ -72,7 +72,8 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
                                   float(self.request.query_params.get('latitude')),
                                   srid=4326)
             return Post.objects.filter_post_distance_of_location(user_location,
-                                                                 distance=int(self.request.query_params.get('distance')))
+                                                                 distance=int(
+                                                                     self.request.query_params.get('distance')))
         return Post.objects.all()
 
 
@@ -83,6 +84,23 @@ class CreateCommentAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
     singular_name = 'comment'
 
     def perform_create(self, serializer):
-        post = Post.objects.get(pk=self.kwargs['pk'])
+        post = Post.objects.get(pk=self.kwargs['post_pk'])
         comment = serializer.save(user=self.request.user, post=post)
         return comment
+
+
+class RetrieveUpdateDeleteCommentAPI(ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin,
+                                     generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = (CustomAuthentication,)
+    permission_classes = (IsOwnerAuthentication,)
+    serializer_class = CommentSerializer
+    queryset = Comment.objects.all()
+    singular_name = 'comment'
+
+    def get_object(self):
+        try:
+            obj = Comment.objects.get(post_id=self.kwargs['post_pk'], id=self.kwargs['comment_pk'])
+            self.check_object_permissions(self.request, obj)
+        except Comment.DoesNotExist:
+            raise ObjectNotFoundException
+        return obj

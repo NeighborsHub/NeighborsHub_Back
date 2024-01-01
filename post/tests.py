@@ -257,7 +257,7 @@ class TestCreateComment(TestCase):
 
     def test_api_exists(self):
         response = self.client.post(reverse('create_post_comment',
-                                            kwargs={'pk': self.post.id}), data={}, format='json')
+                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_rejects_empty_data(self):
@@ -266,7 +266,7 @@ class TestCreateComment(TestCase):
         }
         self.client.force_authenticate(self.user)
         response = self.client.post(reverse('create_post_comment',
-                                            kwargs={'pk': self.post.id}), data=empty_data, format='json')
+                                            kwargs={'post_pk': self.post.id}), data=empty_data, format='json')
 
         response_json = response.json()
         self.assertEqual('error', response_json['status'])
@@ -278,9 +278,68 @@ class TestCreateComment(TestCase):
         }
         self.client.force_authenticate(self.user)
         response = self.client.post(reverse('create_post_comment',
-                                            kwargs={'pk': self.post.id}), data=data, format='json')
+                                            kwargs={'post_pk': self.post.id}), data=data, format='json')
 
         response_json = response.json()
         self.assertEqual('ok', response_json['status'])
         self.assertEqual(1, Comment.objects.filter(post_id=self.post.id).count())
         self.assertEqual(1, Hashtag.objects.filter(hashtag_title='comment').count())
+
+
+class TestUpdateRetrieveDeleteComment(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.post = baker.make(Post)
+        self.comment = baker.make(Comment, post=self.post, created_by=self.user)
+
+    def test_api_exists(self):
+        response = self.client.post(reverse('post_comment_update_delete',
+                                            kwargs={
+                                                'post_pk': self.post.id, 'comment_pk': self.comment.id
+                                            }), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejects_dummy_user(self):
+        dummy_user = baker.make(CustomerUser)
+        self.client.force_authenticate(dummy_user)
+        response = self.client.get(reverse('post_comment_update_delete',
+                                           kwargs={
+                                               'post_pk': self.post.id, 'comment_pk': self.comment.id
+                                           }), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_successful_update_comment(self):
+        data = {
+            'body': "This is test for #comment."
+        }
+        self.client.force_authenticate(self.user)
+        response = self.client.put(reverse('post_comment_update_delete',
+                                           kwargs={
+                                               'post_pk': self.post.id, 'comment_pk': self.comment.id
+                                           }), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual(1, Comment.objects.filter(post_id=self.post.id, body=data['body']).count())
+        self.assertEqual(1, Hashtag.objects.filter(hashtag_title='comment').count())
+
+    def test_successful_retrieve_comment(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('post_comment_update_delete',
+                                           kwargs={
+                                               'post_pk': self.post.id, 'comment_pk': self.comment.id
+                                           }), data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual(self.comment.body, response_json['data']['comment']['body'])
+
+    def test_successful_delete_comment(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(reverse('post_comment_update_delete',
+                                              kwargs={
+                                                  'post_pk': self.post.id, 'comment_pk': self.comment.id
+                                              }), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertIsNone(Comment.objects.filter(id=self.comment.id).first())
