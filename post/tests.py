@@ -300,7 +300,6 @@ class TestListComment(TestCase):
                                             kwargs={'post_pk': self.post.id}), data={}, format='json')
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-
     def test_successful_create_comment(self):
         response = self.client.get(reverse('list_post_comment',
                                             kwargs={'post_pk': self.post.id}), data={}, format='json')
