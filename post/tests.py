@@ -286,6 +286,30 @@ class TestCreateComment(TestCase):
         self.assertEqual(1, Hashtag.objects.filter(hashtag_title='comment').count())
 
 
+class TestListComment(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.post = baker.make(Post)
+        comment = baker.make(Comment, post=self.post, created_by=self.user)
+        reply_comment = baker.make(Comment, post=self.post, reply_to=comment)
+        reply_reply = baker.make(Comment, post=self.post, reply_to=reply_comment)
+
+    def test_api_exists(self):
+        response = self.client.get(reverse('list_post_comment',
+                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+    def test_successful_create_comment(self):
+        response = self.client.get(reverse('list_post_comment',
+                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
+
+        response_json = response.json()
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual(1, response_json['data']['comments']['count'])
+
+
 class TestUpdateRetrieveDeleteComment(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()

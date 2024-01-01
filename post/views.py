@@ -8,7 +8,7 @@ from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundExcept
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from post.filters import ListPostFilter
 from post.models import Post, Comment
-from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer
+from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer
 from users.models import Address
 from django.contrib.gis.geos import Point
 
@@ -104,3 +104,11 @@ class RetrieveUpdateDeleteCommentAPI(ExpressiveUpdateModelMixin, ExpressiveRetri
         except Comment.DoesNotExist:
             raise ObjectNotFoundException
         return obj
+
+
+class ListCommentAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    serializer_class = ListCommentSerializer
+    plural_name = 'comments'
+
+    def get_queryset(self):
+        return Comment.objects.filter(post_id=self.kwargs['post_pk'], reply_to__isnull=True).order_by('-id')

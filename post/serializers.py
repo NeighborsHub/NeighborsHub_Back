@@ -88,3 +88,20 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'body', 'created_at', 'created_by', 'updated_at')
+
+
+class ListCommentSerializer(serializers.ModelSerializer):
+    replies = serializers.SerializerMethodField('get_replies')
+    is_owner = serializers.SerializerMethodField('get_is_owner')
+
+    def get_replies(self, obj):
+        replies = Comment.objects.filter(reply_to=obj)
+        return ListCommentSerializer(instance=replies,context=self.context, many=True).data
+
+    def get_is_owner(self, obj):
+        user = self.context['request'].user
+        return obj.created_by == user
+
+    class Meta:
+        model = Comment
+        fields = ('id', 'body', 'replies', 'is_owner', 'created_at', 'created_by', 'updated_at')
