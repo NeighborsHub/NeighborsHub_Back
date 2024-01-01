@@ -82,7 +82,6 @@ class TestCreatePost(TestCase):
         self.client.force_authenticate(self.user)
         response = self.client.post(reverse('user_post_create'), valid_data, format='multipart')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual('ok', response_json['status'])
         self.assertIn('post', response_json['data'])
@@ -111,7 +110,6 @@ class TestMyListPost(TestCase):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('user_post_list'), data={}, format='json')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
 
@@ -122,7 +120,6 @@ class TestMyListPost(TestCase):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('user_post_list'), data={}, format='json')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(1, response_json['data']['posts']['count'])
