@@ -5,7 +5,7 @@ from rest_framework.filters import SearchFilter
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin, \
     ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
 from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundException
-from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
+from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, CustomAuthenticationWithoutEffect
 from post.filters import ListPostFilter
 from post.models import Post, Comment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer
@@ -107,6 +107,7 @@ class RetrieveUpdateDeleteCommentAPI(ExpressiveUpdateModelMixin, ExpressiveRetri
 
 
 class ListCommentAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect, )
     serializer_class = ListCommentSerializer
     plural_name = 'comments'
 

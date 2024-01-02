@@ -20,7 +20,7 @@ class CustomAuthentication(authentication.BaseAuthentication):
 
     def authenticate(self, request):
         token = request.META.get('HTTP_AUTHORIZATION')
-        if token is None or len(token.split())< 2:
+        if token is None or len(token.split()) < 2:
             raise exceptions.AuthenticationFailed(_('Access token is not exist.'))
         has_error, payload = verify_custom_token(token.split()[1])
         if has_error:
@@ -33,6 +33,14 @@ class CustomAuthentication(authentication.BaseAuthentication):
         return user, None
 
 
+class CustomAuthenticationWithoutEffect(CustomAuthentication):
+    def authenticate(self, request):
+        try:
+            return super().authenticate(request)
+        except Exception:
+            return None, None
+
+
 class IsOwnerAuthentication(BasePermission):
 
     def has_object_permission(self, request, view, obj):
@@ -40,4 +48,3 @@ class IsOwnerAuthentication(BasePermission):
             return obj.user == request.user
         else:
             return obj.created_by == request.user
-
