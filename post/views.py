@@ -8,7 +8,8 @@ from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundExcept
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, CustomAuthenticationWithoutEffect
 from post.filters import ListPostFilter
 from post.models import Post, Comment
-from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer
+from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
+    RetrievePostSerializer
 from users.models import Address
 from django.contrib.gis.geos import Point
 
@@ -53,6 +54,21 @@ class RetrieveUpdateDeleteUserPostAPI(ExpressiveUpdateModelMixin, ExpressiveRetr
         try:
             obj = Post.objects.get(pk=self.kwargs['pk'])
             self.check_object_permissions(self.request, obj)
+        except Post.DoesNotExist:
+            raise ObjectNotFoundException
+        return obj
+
+
+class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect, )
+    permission_classes = (IsOwnerAuthentication,)
+    serializer_class = RetrievePostSerializer
+    singular_name = 'post'
+    queryset = Post.objects.all()
+
+    def get_object(self):
+        try:
+            obj = Post.objects.get(pk=self.kwargs['post_pk'])
         except Post.DoesNotExist:
             raise ObjectNotFoundException
         return obj

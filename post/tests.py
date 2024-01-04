@@ -294,13 +294,13 @@ class TestListComment(TestCase):
 
     def test_api_exists(self):
         response = self.client.get(reverse('list_post_comment',
-                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
+                                           kwargs={'post_pk': self.post.id}), data={}, format='json')
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_successful_list_comment(self):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('list_post_comment',
-                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
+                                           kwargs={'post_pk': self.post.id}), data={}, format='json')
 
         response_json = response.json()
         self.assertEqual('ok', response_json['status'])
@@ -311,6 +311,25 @@ class TestListComment(TestCase):
         self.assertFalse(response_json['data']['comments']['results'][0]['replies'][0]['is_owner'])
 
 
+class TestRetrievePost(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.post = baker.make(Post, created_by=self.user)
+
+    def test_api_exists(self):
+        response = self.client.get(reverse('post_retrieve',
+                                           kwargs={'post_pk': self.post.id}), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_successful_list_comment(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('post_retrieve',
+                                           kwargs={'post_pk': self.post.id}), data={}, format='json')
+
+        response_json = response.json()
+        self.assertEqual('ok', response_json['status'])
+        self.assertTrue(response_json['data']['post']['is_owner'])
 
 
 class TestUpdateRetrieveDeleteComment(TestCase):

@@ -14,6 +14,24 @@ class TruncatedTextField(serializers.CharField):
         return data
 
 
+class RetrievePostSerializer(serializers.ModelSerializer):
+    created_by = UserSerializer(read_only=True)
+    address = AddressSerializer(read_only=True)
+    title = serializers.CharField(max_length=100, allow_null=True)
+    body = serializers.CharField(allow_null=False)
+    media = MediaSerializer(many=True, read_only=True)
+    is_owner = serializers.SerializerMethodField('get_is_owner')
+
+    def get_is_owner(self, obj):
+        user = self.context['request'].user
+        return obj.created_by == user
+
+    class Meta:
+        model = Post
+        fields = ('id', 'address', 'title', 'created_by', 'body', 'media',
+                  'created_at', 'updated_at', 'is_owner')
+
+
 class PostSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True)
     address_id = serializers.IntegerField(required=True, write_only=True)
@@ -55,7 +73,7 @@ class PostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('id', 'address', 'title', 'created_by', 'body', 'updated_by', 'body', 'media', 'medias',
-                  'address', 'created_at', 'address_id', 'address')
+                  'created_at', 'address_id')
 
 
 class MyListPostSerializer(serializers.ModelSerializer):
@@ -96,7 +114,7 @@ class ListCommentSerializer(serializers.ModelSerializer):
 
     def get_replies(self, obj):
         replies = Comment.objects.filter(reply_to=obj)
-        return ListCommentSerializer(instance=replies,context=self.context, many=True).data
+        return ListCommentSerializer(instance=replies, context=self.context, many=True).data
 
     def get_is_owner(self, obj):
         user = self.context['request'].user
