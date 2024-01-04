@@ -81,6 +81,9 @@ class Like(BaseModel):
         return (f"Like(id={self.id}",
                 f" type={self.type}, created_at={self.created_at})")
 
+    class Meta:
+        abstract = True
+
 
 class LikePost(Like):
     post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='post_likes')
