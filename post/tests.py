@@ -116,13 +116,16 @@ class TestMyListPost(TestCase):
     def test_user_can_see_own_post(self):
         dummy_user = baker.make(CustomerUser)
         baker.make(Post, created_by=dummy_user, _quantity=10)
-        baker.make(Post, created_by=self.user, _quantity=1)
+        post = baker.make(Post, created_by=self.user, _quantity=1)
+        baker.make(LikePost, post=post[0], created_by=self.user, _quantity=10)
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('user_post_list'), data={}, format='json')
         response_json = response.json()
+        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(1, response_json['data']['posts']['count'])
+        self.assertTrue(response_json['data']['posts']['results'][0]['is_user_liked'])
 
 
 class TestUpdateDeleteRetrievePost(TestCase):

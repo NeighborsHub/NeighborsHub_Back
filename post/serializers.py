@@ -1,3 +1,4 @@
+from django.db.models import Count
 from rest_framework import serializers
 
 from albums.models import Media
@@ -64,15 +65,25 @@ class MyListPostSerializer(serializers.ModelSerializer):
     title = serializers.CharField(max_length=100)
     body = TruncatedTextField(max_length=100)
     media = serializers.SerializerMethodField('get_truncated_medias')
+    likes = serializers.SerializerMethodField('get_likes_count')
+    is_user_liked = serializers.SerializerMethodField('get_is_user_like')
 
     def get_truncated_medias(self, obj):
         qs = obj.media.all()
         qs = qs[:2] if qs is not None and qs.count() > 2 else qs
         return MediaSerializer(instance=qs, many=True).data
 
+    def get_likes_count(self, obj):
+        res = LikePost.objects.filter(post_id=obj.id).values('type').annotate(count=Count('type'))
+        res = res.values('type', 'count')
+        return res
+    def get_is_user_like(self, obj):
+        res = LikePost.objects.filter(post_id=obj.id, created_by=self.context['request'].user).exists()
+        return res
+
     class Meta:
         model = Post
-        fields = ('id', 'created_by', 'address', 'body', 'title', 'media',)
+        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'likes', 'is_user_liked')
 
 
 class CommentSerializer(serializers.ModelSerializer):
