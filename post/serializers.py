@@ -126,3 +126,13 @@ class LikePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = LikePost
         fields = ('id', 'type', 'created_by', 'created_at')
+
+
+class LikeCommentSerializer(serializers.ModelSerializer):
+    created_by = UserSerializer(read_only=True)
+    type = serializers.ChoiceField(default='like', choices=Like.LIKE_CHOICES)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = LikePost
+        fields = ('id', 'type', 'created_by', 'created_at')

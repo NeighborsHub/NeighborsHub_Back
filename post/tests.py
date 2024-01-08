@@ -10,7 +10,7 @@ from rest_framework.reverse import reverse
 from NeighborsHub.test_function import test_object_attributes_existence
 from albums.models import Media
 from core.models import Hashtag
-from post.models import Post, PostHashtag, Comment, CommentHashtag, LikePost
+from post.models import Post, PostHashtag, Comment, CommentHashtag, LikePost, LikeComment
 from users.models import Address, CustomerUser
 from users.tests import _create_user
 from rest_framework.test import APIClient
@@ -402,6 +402,36 @@ class LikePostTestCase(TestCase):
                                               kwargs={'post_pk': self.post.id}), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIsNone(LikePost.objects.filter(post_id=self.post.id).first())
+
+
+class LikeCommentTestCase(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.comment = baker.make(Comment)
+
+    def test_api_exists(self):
+        response = self.client.post(reverse('comment_like',
+                                            kwargs={'comment_pk': self.comment.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_user_likes_successful(self):
+        self.client.force_authenticate(self.user)
+        data = {'type': 'support'}
+        response = self.client.post(reverse('comment_like',
+                                            kwargs={'comment_pk': self.comment.id}), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertIsNotNone(LikeComment.objects.filter(comment_id=self.comment.id, type='support').first())
+
+    def test_user_removes_like_successful(self):
+        self.client.force_authenticate(self.user)
+        baker.make(LikeComment, comment_id=self.comment.id, created_by=self.user)
+        response = self.client.delete(reverse('comment_like',
+                                              kwargs={'comment_pk': self.comment.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertIsNone(LikeComment.objects.filter(comment_id=self.comment.id,).first())
 
 
 

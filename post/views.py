@@ -9,9 +9,9 @@ from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, Expressiv
 from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundException
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from post.filters import ListPostFilter
-from post.models import Post, Comment, LikePost
+from post.models import Post, Comment, LikePost, LikeComment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
-    LikePostSerializer
+    LikePostSerializer, LikeCommentSerializer
 from users.models import Address
 from django.contrib.gis.geos import Point
 
@@ -137,3 +137,24 @@ class LikePostAPI(APIView):
         LikePost.objects.filter(created_by=request.user, post_id=post_pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
+
+class LikeCommentAPI(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def post(request, comment_pk):
+        serializer = LikeCommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        LikeComment.objects.filter(comment_id=comment_pk, created_by=request.user).delete()
+        like_comment = LikeComment.objects.create(
+            created_by=request.user, updated_by=request.user,
+            comment_id=comment_pk, type=serializer.validated_data['type']
+        )
+        like_comment.save()
+        return Response(data={"status": "ok", "data": {}, "message": "Like comment successfully"})
+
+    @staticmethod
+    def delete(request, comment_pk):
+        LikeComment.objects.filter(created_by=request.user, comment_id=comment_pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
