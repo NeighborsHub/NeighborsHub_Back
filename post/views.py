@@ -80,6 +80,7 @@ class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
 
 
 class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect, )
     serializer_class = MyListPostSerializer
     queryset = Post.objects.all()
     filter_backends = [DjangoFilterBackend, SearchFilter]
