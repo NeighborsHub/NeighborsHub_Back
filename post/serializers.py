@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from albums.models import Media
 from albums.serializers import MediaSerializer
-from post.models import Post, Comment
+from post.models import Post, Comment, Like, LikePost
 from users.models import Address
 from users.serializers import UserSerializer, AddressSerializer
 
@@ -96,7 +96,7 @@ class ListCommentSerializer(serializers.ModelSerializer):
 
     def get_replies(self, obj):
         replies = Comment.objects.filter(reply_to=obj)
-        return ListCommentSerializer(instance=replies,context=self.context, many=True).data
+        return ListCommentSerializer(instance=replies, context=self.context, many=True).data
 
     def get_is_owner(self, obj):
         user = self.context['request'].user
@@ -105,3 +105,13 @@ class ListCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'body', 'replies', 'is_owner', 'created_at', 'created_by', 'updated_at')
+
+
+class LikePostSerializer(serializers.ModelSerializer):
+    created_by = UserSerializer(read_only=True)
+    type = serializers.ChoiceField(default='like', choices=Like.LIKE_CHOICES)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = LikePost
+        fields = ('id', 'type', 'created_by', 'created_at')

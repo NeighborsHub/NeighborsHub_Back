@@ -10,7 +10,7 @@ from rest_framework.reverse import reverse
 from NeighborsHub.test_function import test_object_attributes_existence
 from albums.models import Media
 from core.models import Hashtag
-from post.models import Post, PostHashtag, Comment, CommentHashtag
+from post.models import Post, PostHashtag, Comment, CommentHashtag, LikePost
 from users.models import Address, CustomerUser
 from users.tests import _create_user
 from rest_framework.test import APIClient
@@ -294,13 +294,13 @@ class TestListComment(TestCase):
 
     def test_api_exists(self):
         response = self.client.get(reverse('list_post_comment',
-                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
+                                           kwargs={'post_pk': self.post.id}), data={}, format='json')
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_successful_list_comment(self):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('list_post_comment',
-                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
+                                           kwargs={'post_pk': self.post.id}), data={}, format='json')
 
         response_json = response.json()
         self.assertEqual('ok', response_json['status'])
@@ -309,8 +309,6 @@ class TestListComment(TestCase):
         self.assertEqual(1, len(response_json['data']['comments']['results'][0]['replies'][0]['replies']))
         self.assertTrue(response_json['data']['comments']['results'][0]['is_owner'])
         self.assertFalse(response_json['data']['comments']['results'][0]['replies'][0]['is_owner'])
-
-
 
 
 class TestUpdateRetrieveDeleteComment(TestCase):
@@ -370,3 +368,39 @@ class TestUpdateRetrieveDeleteComment(TestCase):
                                               }), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIsNone(Comment.objects.filter(id=self.comment.id).first())
+
+
+class LikePostTestCase(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.post = baker.make(Post)
+
+    def test_api_exists(self):
+        response = self.client.post(reverse('post_like',
+                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_user_likes_successful(self):
+        self.client.force_authenticate(self.user)
+        data = {'type': 'support'}
+        response = self.client.post(reverse('post_like',
+                                            kwargs={'post_pk': self.post.id}), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertIsNotNone(LikePost.objects.filter(post_id=self.post.id, type='support').first())
+        self.assertIsNone(LikePost.objects.filter(post_id=self.post.id, type='like').first())
+
+    def test_user_removes_like_successful(self):
+        self.client.force_authenticate(self.user)
+        baker.make(LikePost, post_id=self.post.id, created_by=self.user)
+        response = self.client.delete(reverse('post_like',
+                                              kwargs={'post_pk': self.post.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertIsNone(LikePost.objects.filter(post_id=self.post.id).first())
+
+
+
+
+
