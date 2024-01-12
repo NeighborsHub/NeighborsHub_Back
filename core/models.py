@@ -1,5 +1,8 @@
 from django.contrib.gis.db import models
 
+from django.contrib.gis.geos import Point
+from django.contrib.gis.db.models.functions import Distance
+
 
 # Create your models here.
 class States(models.Model):
@@ -63,6 +66,11 @@ class State(models.Model):
         return f"{self.name}, {self.country}"
 
 
+class CityManager(models.Manager):
+    def find_nearest_city(self, location_point: Point):
+        return self.annotate(distance=Distance('location', location_point)).order_by('distance').first()
+
+
 class City(models.Model):
     name = models.CharField(max_length=100)
     name_code = models.CharField(max_length=50)
@@ -70,6 +78,8 @@ class City(models.Model):
     location = models.PointField(null=True, blank=True)
 
     state = models.ForeignKey(State, on_delete=models.CASCADE)
+
+    objects = CityManager()
 
     def __str__(self):
         return f"{self.name}, {self.state}"

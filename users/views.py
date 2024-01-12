@@ -11,6 +11,7 @@ from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExis
     IncorrectUsernamePasswordException, ObjectNotFoundException
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
+from core.models import City
 from users.models import CustomerUser, validate_email, Address
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
@@ -396,7 +397,9 @@ class ListCreateUserAddressAPI(ExpressiveCreateModelMixin, ExpressiveListModelMi
     plural_name = 'addresses'
 
     def perform_create(self, serializer):
-        address = serializer.save(user=self.request.user, city_id=serializer.validated_data['city_id'])
+        location = serializer.validated_data['location']
+        city = City.objects.find_nearest_city(location)
+        address = serializer.save(user=self.request.user, city_id=city.id)
         return address
 
     def get_queryset(self):

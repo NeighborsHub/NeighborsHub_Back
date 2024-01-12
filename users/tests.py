@@ -3,6 +3,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from model_bakery import baker
+from django.contrib.gis.geos import Point
 from rest_framework import status
 from rest_framework.reverse import reverse
 
@@ -738,7 +739,9 @@ class TestCreateListAddress(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.user = _create_user()
-        self.city = baker.make(City)
+        self.city = baker.make(City, name='This is city', location=Point(-87.650175, 41.850385))
+        baker.make(City, location=Point(-89, 32.23))
+        baker.make(City, location=Point(87.650175, 98.850385))
 
     def test_exist_api(self):
         response = self.client.get(
@@ -751,7 +754,6 @@ class TestCreateListAddress(TestCase):
             "location": {"type": "Point", "coordinates": [-87.650175, 41.850385]},
             'street': 'Iran- Tehran-',
             'zip_code': '12345689',
-            'city_id': self.city.id,
             'is_main_address': False,
             'is_public': True,
         }
@@ -821,6 +823,8 @@ class TestCreateListAddress(TestCase):
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(1, Address.objects.filter(user=self.user, is_main_address=True).count())
+
+
 class TestRetrieveUpdateAddress(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
