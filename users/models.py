@@ -113,6 +113,12 @@ class Address(BaseModel):
             raise NotOwnAddressException
         return is_owner
 
+    def save(self, *args, **kwargs):
+        if self.is_main_address:
+            Address.objects.filter(user=self.user).update(is_main_address=False)
+        super().save(*args, **kwargs)
+
+
 
     def __str__(self):
         return (f"Address(id={self.id}, status={self.state}, user_id={self.user.id},  "

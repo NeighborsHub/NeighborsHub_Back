@@ -806,7 +806,21 @@ class TestCreateListAddress(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(0, len(response_json['data']['addresses']['results']))
 
-
+    def test_is_main_address_only_one(self):
+        self.client.force_authenticate(self.user)
+        baker.make(Address, city=self.city, is_main_address=True, user=self.user)
+        data = {
+            "location": {"type": "Point", "coordinates": [-87.650175, 41.850385]},
+            'street': 'Iran- Tehran-',
+            'zip_code': '12345689',
+            'city_id': self.city.id,
+            'is_main_address': True,
+            'is_public': True,
+        }
+        response = self.client.post(reverse('user_list_create_address'), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(1, Address.objects.filter(user=self.user, is_main_address=True).count())
 class TestRetrieveUpdateAddress(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
