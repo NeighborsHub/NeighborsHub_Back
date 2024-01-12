@@ -1,15 +1,17 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.filters import SearchFilter
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin, \
     ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
 from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundException
-from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, CustomAuthenticationWithoutEffect
+from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from post.filters import ListPostFilter
-from post.models import Post, Comment
+from post.models import Post, Comment, LikePost, LikeComment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
-    RetrievePostSerializer
+    LikePostSerializer, LikeCommentSerializer
 from users.models import Address
 from django.contrib.gis.geos import Point
 
@@ -54,21 +56,6 @@ class RetrieveUpdateDeleteUserPostAPI(ExpressiveUpdateModelMixin, ExpressiveRetr
         try:
             obj = Post.objects.get(pk=self.kwargs['pk'])
             self.check_object_permissions(self.request, obj)
-        except Post.DoesNotExist:
-            raise ObjectNotFoundException
-        return obj
-
-
-class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
-    authentication_classes = (CustomAuthenticationWithoutEffect, )
-    permission_classes = (IsOwnerAuthentication,)
-    serializer_class = RetrievePostSerializer
-    singular_name = 'post'
-    queryset = Post.objects.all()
-
-    def get_object(self):
-        try:
-            obj = Post.objects.get(pk=self.kwargs['post_pk'])
         except Post.DoesNotExist:
             raise ObjectNotFoundException
         return obj
@@ -123,9 +110,51 @@ class RetrieveUpdateDeleteCommentAPI(ExpressiveUpdateModelMixin, ExpressiveRetri
 
 
 class ListCommentAPI(ExpressiveListModelMixin, generics.ListAPIView):
-    authentication_classes = (CustomAuthenticationWithoutEffect, )
     serializer_class = ListCommentSerializer
     plural_name = 'comments'
 
     def get_queryset(self):
         return Comment.objects.filter(post_id=self.kwargs['post_pk'], reply_to__isnull=True).order_by('-id')
+
+
+class LikePostAPI(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def post(request, post_pk):
+        serializer = LikePostSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        LikePost.objects.filter(post_id=post_pk, created_by=request.user).delete()
+        like_post = LikePost.objects.create(
+            created_by=request.user, updated_by=request.user,
+            post_id=post_pk, type=serializer.validated_data['type']
+        )
+        like_post.save()
+        return Response(data={"status": "ok", "data": {}, "message": "Like post successfully"})
+    
+    @staticmethod
+    def delete(request, post_pk):
+        LikePost.objects.filter(created_by=request.user, post_id=post_pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+class LikeCommentAPI(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def post(request, comment_pk):
+        serializer = LikeCommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        LikeComment.objects.filter(comment_id=comment_pk, created_by=request.user).delete()
+        like_comment = LikeComment.objects.create(
+            created_by=request.user, updated_by=request.user,
+            comment_id=comment_pk, type=serializer.validated_data['type']
+        )
+        like_comment.save()
+        return Response(data={"status": "ok", "data": {}, "message": "Like comment successfully"})
+
+    @staticmethod
+    def delete(request, comment_pk):
+        LikeComment.objects.filter(created_by=request.user, comment_id=comment_pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+

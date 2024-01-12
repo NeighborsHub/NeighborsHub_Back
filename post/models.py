@@ -78,8 +78,7 @@ class Like(BaseModel):
     type = models.CharField(max_length=10, choices=LIKE_CHOICES)
 
     def __str__(self):
-        return (f"Like(id={self.id}",
-                f" type={self.type}, created_at={self.created_at})")
+        return f"Like(id={self.id}, type={self.type}, created_at={self.created_at})"
 
     class Meta:
         abstract = True
