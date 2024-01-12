@@ -7,11 +7,14 @@ from rest_framework.views import APIView
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin, \
     ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
 from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundException
-from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
+from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, CustomAuthenticationWithoutEffect
 from post.filters import ListPostFilter
 from post.models import Post, Comment, LikePost, LikeComment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
     LikePostSerializer, LikeCommentSerializer
+from post.models import Post, Comment
+from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
+    RetrievePostSerializer
 from users.models import Address
 from django.contrib.gis.geos import Point
 
@@ -61,7 +64,23 @@ class RetrieveUpdateDeleteUserPostAPI(ExpressiveUpdateModelMixin, ExpressiveRetr
         return obj
 
 
+class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect, )
+    permission_classes = (IsOwnerAuthentication,)
+    serializer_class = RetrievePostSerializer
+    singular_name = 'post'
+    queryset = Post.objects.all()
+
+    def get_object(self):
+        try:
+            obj = Post.objects.get(pk=self.kwargs['post_pk'])
+        except Post.DoesNotExist:
+            raise ObjectNotFoundException
+        return obj
+
+
 class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect, )
     serializer_class = MyListPostSerializer
     queryset = Post.objects.all()
     filter_backends = [DjangoFilterBackend, SearchFilter]
@@ -110,6 +129,7 @@ class RetrieveUpdateDeleteCommentAPI(ExpressiveUpdateModelMixin, ExpressiveRetri
 
 
 class ListCommentAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect, )
     serializer_class = ListCommentSerializer
     plural_name = 'comments'
 
@@ -131,12 +151,12 @@ class LikePostAPI(APIView):
         )
         like_post.save()
         return Response(data={"status": "ok", "data": {}, "message": "Like post successfully"})
-    
+
     @staticmethod
     def delete(request, post_pk):
         LikePost.objects.filter(created_by=request.user, post_id=post_pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
 
 class LikeCommentAPI(APIView):
     authentication_classes = (CustomAuthentication,)

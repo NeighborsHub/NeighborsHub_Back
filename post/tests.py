@@ -314,6 +314,27 @@ class TestListComment(TestCase):
         self.assertFalse(response_json['data']['comments']['results'][0]['replies'][0]['is_owner'])
 
 
+class TestRetrievePost(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.post = baker.make(Post, created_by=self.user)
+
+    def test_api_exists(self):
+        response = self.client.get(reverse('post_retrieve',
+                                           kwargs={'post_pk': self.post.id}), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_successful_list_comment(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('post_retrieve',
+                                           kwargs={'post_pk': self.post.id}), data={}, format='json')
+
+        response_json = response.json()
+        self.assertEqual('ok', response_json['status'])
+        self.assertTrue(response_json['data']['post']['is_owner'])
+
+
 class TestUpdateRetrieveDeleteComment(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
@@ -431,9 +452,4 @@ class LikeCommentTestCase(TestCase):
         response = self.client.delete(reverse('comment_like',
                                               kwargs={'comment_pk': self.comment.id}), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertIsNone(LikeComment.objects.filter(comment_id=self.comment.id,).first())
-
-
-
-
-
+        self.assertIsNone(LikeComment.objects.filter(comment_id=self.comment.id, ).first())
