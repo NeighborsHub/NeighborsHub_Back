@@ -875,3 +875,43 @@ class TestRetrieveUpdateAddress(TestCase):
         self.assertEqual(data['zip_code'], response_json['data']['address']['zip_code'])
         self.assertEqual(data['is_main_address'], response_json['data']['address']['is_main_address'])
         self.assertEqual(data['location']['coordinates'], response_json['data']['address']['location']['coordinates'])
+
+
+class TestUpdatePasword(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_exist_api(self):
+        response = self.client.post(reverse('user_update_password'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejects_empty_data(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(reverse('user_update_password'), data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('old_password', response_json['data'])
+        self.assertIn('new_password', response_json['data'])
+
+    def test_rejects_wrong_old_password(self):
+        self.client.force_authenticate(self.user)
+        data = {'old_password': 'wrong_password', 'new_password': '12345'}
+        response = self.client.post(reverse('user_update_password'), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertEqual('Wrong old password', response_json['message'])
+
+    def test_successful_update_address(self):
+        self.client.force_authenticate(self.user)
+        new_password = 'new_password'
+        data = {'old_password': USER_VALID_DATA['password'], 'new_password': new_password}
+        response = self.client.post(reverse('user_update_password'), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual('Password Changed', response_json['message'])
+        user = get_user_model().objects.get(id=self.user.id)
+        self.assertTrue(user.check_password(new_password))

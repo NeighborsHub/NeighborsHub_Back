@@ -16,7 +16,7 @@ from users.models import CustomerUser, validate_email, Address
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
     VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
-    VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer
+    VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer, UpdateUserPasswordSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -408,8 +408,8 @@ class ListCreateUserAddressAPI(ExpressiveCreateModelMixin, ExpressiveListModelMi
 
 class RetrieveUpdateUserAddressAPI(ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin,
                                    generics.RetrieveUpdateDestroyAPIView):
-    authentication_classes = (CustomAuthentication, )
-    permission_classes = (IsOwnerAuthentication, )
+    authentication_classes = (CustomAuthentication,)
+    permission_classes = (IsOwnerAuthentication,)
     serializer_class = ListCreateAddressSerializer
     queryset = Address.objects.filter()
     singular_name = 'address'
@@ -421,3 +421,18 @@ class RetrieveUpdateUserAddressAPI(ExpressiveUpdateModelMixin, ExpressiveRetriev
         except Address.DoesNotExist:
             raise ObjectNotFoundException
         return obj
+
+
+class UpdateUserPasswordAPI(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    def post(self, request):
+        user = self.request.user
+        serializer = UpdateUserPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not user.check_password(serializer.validated_data['old_password']):
+            return Response(data={"status": "error", "message": _('Wrong old password')},
+                            status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        return Response(data={"status": "ok", "message": _('Password Changed')})

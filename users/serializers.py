@@ -226,3 +226,12 @@ class AddressSerializer(GeoModelSerializer):
         model = Address
         geometry_field = "location"
         fields = ['city', 'id', 'street', 'zip_code', 'is_main_address', 'location']
+
+
+class UpdateUserPasswordSerializer(serializers.ModelSerializer):
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = ['old_password', 'new_password']
