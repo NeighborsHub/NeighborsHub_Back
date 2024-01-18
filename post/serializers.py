@@ -95,6 +95,7 @@ class MyListPostSerializer(serializers.ModelSerializer):
         res = LikePost.objects.filter(post_id=obj.id).values('type').annotate(count=Count('type'))
         res = res.values('type', 'count')
         return res
+
     def get_is_user_like(self, obj):
         res = LikePost.objects.filter(post_id=obj.id, created_by=self.context['request'].user).exists()
         return res

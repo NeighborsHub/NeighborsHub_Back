@@ -65,7 +65,7 @@ class RetrieveUpdateDeleteUserPostAPI(ExpressiveUpdateModelMixin, ExpressiveRetr
 
 
 class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
-    authentication_classes = (CustomAuthenticationWithoutEffect, )
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
     permission_classes = (IsOwnerAuthentication,)
     serializer_class = RetrievePostSerializer
     singular_name = 'post'
@@ -80,7 +80,7 @@ class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
 
 
 class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
-    authentication_classes = (CustomAuthenticationWithoutEffect, )
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
     serializer_class = MyListPostSerializer
     queryset = Post.objects.all()
     filter_backends = [DjangoFilterBackend, SearchFilter]
@@ -93,10 +93,14 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
             user_location = Point(float(self.request.query_params.get('longitude')),
                                   float(self.request.query_params.get('latitude')),
                                   srid=4326)
-            return Post.objects.filter_post_distance_of_location(user_location,
-                                                                 distance=int(
-                                                                     self.request.query_params.get('distance')))
-        return Post.objects.all()
+            posts = Post.objects.filter_post_distance_of_location(user_location,
+                                                                  distance=int(
+                                                                      self.request.query_params.get('distance')))
+        else:
+            posts = Post.objects.all()
+
+        posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
+        return posts
 
 
 class CreateCommentAPI(ExpressiveCreateModelMixin, generics.CreateAPIView):
@@ -129,7 +133,7 @@ class RetrieveUpdateDeleteCommentAPI(ExpressiveUpdateModelMixin, ExpressiveRetri
 
 
 class ListCommentAPI(ExpressiveListModelMixin, generics.ListAPIView):
-    authentication_classes = (CustomAuthenticationWithoutEffect, )
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
     serializer_class = ListCommentSerializer
     plural_name = 'comments'
 
@@ -177,4 +181,3 @@ class LikeCommentAPI(APIView):
     def delete(request, comment_pk):
         LikeComment.objects.filter(created_by=request.user, comment_id=comment_pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
