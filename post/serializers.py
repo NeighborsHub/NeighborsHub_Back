@@ -1,5 +1,6 @@
 from django.db.models import Count
 from rest_framework import serializers
+from rest_framework_gis.serializers import GeoModelSerializer, GeometryField
 
 from albums.models import Media
 from albums.serializers import MediaSerializer
@@ -103,6 +104,15 @@ class MyListPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'likes', 'is_user_liked')
+
+
+class ListCountLocationPostsSerializer(GeoModelSerializer):
+    posts_count = serializers.IntegerField(read_only=True)
+    location = GeometryField(source='address__location')
+
+    class Meta:
+        model = Post
+        fields = ('posts_count', 'location')
 
 
 class CommentSerializer(serializers.ModelSerializer):

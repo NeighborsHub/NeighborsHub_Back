@@ -1,3 +1,4 @@
+from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status
 from rest_framework.filters import SearchFilter
@@ -11,7 +12,7 @@ from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication,
 from post.filters import ListPostFilter
 from post.models import Post, Comment, LikePost, LikeComment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
-    LikePostSerializer, LikeCommentSerializer
+    LikePostSerializer, LikeCommentSerializer, ListCountLocationPostsSerializer
 from post.models import Post, Comment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
     RetrievePostSerializer
@@ -90,8 +91,8 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     def get_queryset(self):
         if (self.request.query_params.get('latitude') is not None and
                 self.request.query_params.get('longitude') is not None):
-            user_location = Point(float(self.request.query_params.get('longitude')),
-                                  float(self.request.query_params.get('latitude')),
+            user_location = Point(float(self.request.query_params.get('latitude')),
+                                  float(self.request.query_params.get('longitude')),
                                   srid=4326)
             posts = Post.objects.filter_post_distance_of_location(user_location,
                                                                   distance=int(
@@ -100,6 +101,30 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
             posts = Post.objects.all()
 
         posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
+        return posts
+
+
+class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
+    serializer_class = ListCountLocationPostsSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = ListPostFilter
+    plural_name = 'posts'
+
+    def get_queryset(self):
+        if (self.request.query_params.get('latitude') is not None and
+                self.request.query_params.get('longitude') is not None):
+            user_location = Point(float(self.request.query_params.get('latitude')),
+                                  float(self.request.query_params.get('longitude')),
+                                  srid=4326)
+            posts = Post.objects.filter_post_distance_of_location(user_location,
+                                                                  distance=int(
+                                                                      self.request.query_params.get('distance')))
+        else:
+            posts = Post.objects.all()
+
+        posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
+        posts = posts.values('address__location').annotate(posts_count=Count('address__location'))
         return posts
 
 

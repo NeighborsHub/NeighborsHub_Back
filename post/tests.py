@@ -192,8 +192,8 @@ class TestListPost(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.user = _create_user()
-        post_address = baker.make(Address, location=Point(-75.5673, 40.5432), )
-        dummy_address = baker.make(Address, location=Point(-79.5680, 41.5435), )
+        post_address = baker.make(Address, location=Point(40.5432, -75.5673), )
+        dummy_address = baker.make(Address, location=Point(41.5435, -79.5680), )
         baker.make(Post, address=post_address, _quantity=2, body="#hello_world")
         baker.make(Post, address=dummy_address, _quantity=10)
 
@@ -223,6 +223,30 @@ class TestListPost(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(2, response_json['data']['posts']['count'])
+
+
+class TestListCountLocationPost(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        address_1 = baker.make(Address, location=Point(40.5432, -75.5673), )
+        address_2 = baker.make(Address, location=Point(42.5435, -80.5680), )
+        address_3 = baker.make(Address, location=Point(41.5435, -79.5680), )
+        baker.make(Post, address=address_1, _quantity=2, body="#hello_world")
+        baker.make(Post, address=address_2, _quantity=3)
+        baker.make(Post, address=address_3, _quantity=4)
+
+    def test_api_exists(self):
+        response = self.client.get(reverse('post_location_count'), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_paginated_posts_location(self):
+        response = self.client.get(reverse('post_location_count', ), data={}, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(3, response_json['data']['posts']['count'])
 
 
 class TsetCommentModel(TestCase):
