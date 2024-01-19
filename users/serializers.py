@@ -235,3 +235,21 @@ class UpdateUserPasswordSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['old_password', 'new_password']
+
+
+class UpdateMobileSerializer(serializers.ModelSerializer):
+    new_mobile = serializers.CharField(required=True, write_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = ['new_mobile', ]
+
+
+class VerifyUpdateMobileSerializer(serializers.ModelSerializer):
+    new_mobile = serializers.CharField(required=True, write_only=True)
+    token = serializers.CharField(required=True, write_only=True)
+    otp = serializers.CharField(required=True, write_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = ['new_mobile', 'token', 'otp', ]

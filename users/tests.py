@@ -915,3 +915,46 @@ class TestUpdatePassword(TestCase):
         self.assertEqual('Password Changed', response_json['message'])
         user = get_user_model().objects.get(id=self.user.id)
         self.assertTrue(user.check_password(new_password))
+
+
+class TestUpdateMobile(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_exist_api(self):
+        response = self.client.post(reverse('user_update_mobile'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        response = self.client.post(reverse('user_verify_update_mobile'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejects_existed_mobile(self):
+        self.client.force_authenticate(self.user)
+        data = {'new_mobile': USER_VALID_DATA['mobile']}
+        response = self.client.post(reverse('user_update_mobile'), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('new_mobile', response_json['data'])
+        self.assertIn('Mobile exists. Enter different number', response_json['data']['new_mobile'][0])
+
+    def test_update_successful(self):
+        self.client.force_authenticate(self.user)
+        with patch('users.utils.create_mobile_otp') as mock_create_otp:
+            new_mobile = '09358590410'
+            input_data = {'new_mobile': new_mobile}
+            mock_create_otp.return_value = '12345'
+            response = self.client.post(reverse('user_update_mobile'), data=input_data, format='json')
+            response_json = response.json()
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual('ok', response_json['status'])
+            self.assertEqual('Otp sent', response_json['message'])
+            token = response_json['data']['token']
+            input_data.update({'otp': mock_create_otp.return_value, 'token': token})
+            response = self.client.post(reverse('user_verify_update_mobile'), data=input_data, format='json')
+            response_json = response.json()
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual('ok', response_json['status'])
+            self.assertEqual('Mobile updated', response_json['message'])
+            self.assertTrue(get_user_model().objects.filter(mobile=new_mobile).exists())
+

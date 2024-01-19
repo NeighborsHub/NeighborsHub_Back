@@ -1,4 +1,6 @@
 import datetime
+
+from django.utils import timezone
 from rest_framework import status
 
 from NeighborsHub.custom_jwt import verify_custom_token, generate_auth_token
@@ -11,12 +13,14 @@ from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExis
     IncorrectUsernamePasswordException, ObjectNotFoundException
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
+from NeighborsHub.utils import create_random_chars
 from core.models import City
 from users.models import CustomerUser, validate_email, Address
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
     VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
-    VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer, UpdateUserPasswordSerializer
+    VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer, UpdateUserPasswordSerializer, UpdateMobileSerializer, \
+    VerifyUpdateMobileSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -436,3 +440,54 @@ class UpdateUserPasswordAPI(APIView):
         user.set_password(serializer.validated_data['new_password'])
         user.save()
         return Response(data={"status": "ok", "message": _('Password Changed')})
+
+
+class RequestSendOTPUpdateMobile(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    def post(self, request):
+        user = self.request.user
+        serializer = UpdateMobileSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if get_user_model().objects.filter(mobile=serializer.validated_data['new_mobile']).exists():
+            return Response(data={'status': 'error', 'data': {'new_mobile': ['Mobile exists. Enter different number']}},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        token = create_random_chars()
+        send_otp_mobile(mobile=serializer.validated_data['new_mobile'],
+                        issued_for=f'UPDATE/MOBILE_{token}_{user.id}')
+
+        return Response(data={"status": "ok", "message": _('Otp sent'), 'data': {'token': token}})
+
+
+class VerifySendOTPUpdateMobile(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    @staticmethod
+    def get_verification_redis_mobile_otp(user: CustomerUser, token: str, mobile: str) -> str:
+        redis = VerificationOTPRedis(issued_for=f'UPDATE/MOBILE_{token}_{user.id}')
+        redis_otp = redis.get(mobile)
+        if isinstance(redis_otp, bytes):
+            redis_otp = redis_otp.decode('utf-8')
+        return redis_otp
+
+    def post(self, request):
+        user = self.request.user
+        serializer = VerifyUpdateMobileSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if get_user_model().objects.filter(mobile=serializer.validated_data['new_mobile']).exists():
+            return Response(data={'status': 'error', 'data': {'new_mobile': ['Mobile exists. Enter different number']}},
+                            status=status.HTTP_400_BAD_REQUEST)
+        redis_otp = self.get_verification_redis_mobile_otp(user,
+                                                           serializer.validated_data['token'],
+                                                           serializer.validated_data['new_mobile'])
+        if redis_otp != serializer.validated_data['otp']:
+            return Response(data={'status': 'error', 'data': {'otp': ['Otp is invalid']}},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        user.mobile = serializer.validated_data['new_mobile']
+        user.is_verified_mobile = True
+        user.verified_mobile_at = timezone.now()
+        user.save()
+        return Response(data={"status": "ok", "message": _('Mobile updated')})

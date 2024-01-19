@@ -4,7 +4,7 @@ from users.views import PreRegisterAPI, VerifyPreRegisterAPI, RegisterAPI, Verif
     SendVerifyMobileAPI, SendVerifyEmailAPI, LogoutApi, \
     VerifyMobileApi, SendOtpLoginApi, VerifyOtpLoginApi, SendForgetPasswordApi, VerifyOtpForgetPasswordApi, \
     VerifyEmailForgetPasswordAPI, VerifyOTPEmailAPI, ListCreateUserAddressAPI, RetrieveUpdateUserAddressAPI, \
-    UpdateUserPasswordAPI
+    UpdateUserPasswordAPI, RequestSendOTPUpdateMobile, VerifySendOTPUpdateMobile
 
 urlpatterns = [
     path('auth/pre-register', PreRegisterAPI.as_view(), name='user_preregister'),
@@ -27,5 +27,7 @@ urlpatterns = [
     path('me/address', ListCreateUserAddressAPI.as_view(), name='user_list_create_address'),
     path('me/address/<int:pk>', RetrieveUpdateUserAddressAPI.as_view(), name='user_get_update_address'),
     path('me/update-password', UpdateUserPasswordAPI.as_view(), name='user_update_password'),
+    path('me/update-mobile', RequestSendOTPUpdateMobile.as_view(), name='user_update_mobile'),
+    path('me/verify-update-mobile', VerifySendOTPUpdateMobile.as_view(), name='user_verify_update_mobile'),
 
 ]
