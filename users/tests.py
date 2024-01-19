@@ -877,7 +877,7 @@ class TestRetrieveUpdateAddress(TestCase):
         self.assertEqual(data['location']['coordinates'], response_json['data']['address']['location']['coordinates'])
 
 
-class TestUpdatePasword(TestCase):
+class TestUpdatePassword(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.user = _create_user()
