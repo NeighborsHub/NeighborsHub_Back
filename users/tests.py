@@ -9,7 +9,7 @@ from rest_framework.reverse import reverse
 
 from NeighborsHub.test_function import test_object_attributes_existence
 from core.models import City
-from users.models import CustomerUser, Address
+from users.models import CustomerUser, Address, Follow
 from rest_framework.test import APIClient
 
 USER_VALID_DATA = {
@@ -958,3 +958,54 @@ class TestUpdateMobile(TestCase):
             self.assertEqual('Mobile updated', response_json['message'])
             self.assertTrue(get_user_model().objects.filter(mobile=new_mobile).exists())
 
+
+class TestFollowUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.user_to_follow = baker.make(get_user_model())
+
+    def test_exist_api(self):
+        response = self.client.post(reverse('user_follow', kwargs={'user_pk': self.user.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejects_user_follow_himself(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(reverse('user_follow', kwargs={'user_pk': self.user.id}),
+                                    data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn("You can't follow yourself", response_json['message'])
+
+    def test_follow_successful(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(reverse('user_follow', kwargs={'user_pk': self.user_to_follow.id}),
+                                    data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual('User followed successfully', response_json['message'])
+        self.assertTrue(Follow.objects.filter(follower=self.user, following=self.user_to_follow).exists())
+
+
+class TestUnfollowUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.user_to_follow = baker.make(get_user_model())
+        baker.make(Follow, follower=self.user, following=self.user_to_follow)
+
+    def test_exist_api(self):
+        response = self.client.post(reverse('user_unfollow', kwargs={'user_pk': self.user.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unfollow_successful(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(reverse('user_unfollow', kwargs={'user_pk': self.user_to_follow.id}),
+                                    data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual('User unfollowed successfully', response_json['message'])
+        self.assertFalse(Follow.objects.filter(follower=self.user, following=self.user_to_follow).exists())
