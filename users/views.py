@@ -15,7 +15,7 @@ from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from NeighborsHub.utils import create_random_chars
 from core.models import City
-from users.models import CustomerUser, validate_email, Address
+from users.models import CustomerUser, validate_email, Address, Follow
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
     VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
@@ -491,3 +491,33 @@ class VerifySendOTPUpdateMobile(APIView):
         user.verified_mobile_at = timezone.now()
         user.save()
         return Response(data={"status": "ok", "message": _('Mobile updated')})
+
+
+class FollowUserApi(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    def post(self, request, user_pk):
+        user = self.request.user
+        if user.id == user_pk:
+            return Response(data={'status': 'error', 'message': _("You can't follow yourself.")},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user_to_follow = get_user_model().objects.get(id=user_pk)
+        except CustomerUser.DoesNotExist:
+            return Response(data={'status': 'error', 'message': _('User not found')}, status=status.HTTP_404_NOT_FOUND)
+        Follow.objects.get_or_create(following=user_to_follow, created_by=user, updated_by=user, follower=user)
+        return Response(data={"status": "ok", "message": _('User followed successfully')})
+
+
+class UnfollowUserAPI(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    def post(self, request, user_pk):
+        user = self.request.user
+        try:
+            user_to_follow = get_user_model().objects.get(id=user_pk)
+        except CustomerUser.DoesNotExist:
+            return Response(data={'status': 'error', 'message': _('User not found')}, status=status.HTTP_404_NOT_FOUND)
+
+        Follow.objects.filter(following=user_to_follow, follower=user).delete()
+        return Response(data={"status": "ok", "message": _('User unfollowed successfully')})
