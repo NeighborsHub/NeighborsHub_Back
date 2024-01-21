@@ -149,10 +149,14 @@ JWT_AUTH_TIME_DELTA = 30  # days
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'NeighborsHub.exceptions.custom_exception_handler',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE' : 10
+    'PAGE_SIZE': 10
 }
 
 GDAL_LIBRARY_PATH = '/lib/libgdal.so'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, '')
+
+GOOGLE_OAUTH2_CLIENT_ID = '1092960991760-7ih57lpsujsf5at6toka7o0vd24ogm21.apps.googleusercontent.com'
+GOOGLE_OAUTH2_CLIENT_SECRET = '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'
+BASE_FRONTEND_URL = 'http://neighborshub.ca/'

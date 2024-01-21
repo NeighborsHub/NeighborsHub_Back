@@ -253,3 +253,8 @@ class VerifyUpdateMobileSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['new_mobile', 'token', 'otp', ]
+
+
+class GoogleOATHLoginSerializer(serializers.Serializer):
+    code = serializers.CharField(required=False)
+    error = serializers.CharField(required=False)
