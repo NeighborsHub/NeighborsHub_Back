@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -90,11 +93,11 @@ WSGI_APPLICATION = 'NeighborsHub.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'HOST': '127.0.0.1',
-        'USER': 'root',
-        'PASSWORD': '12345',
-        'PORT': '5432',
-        'NAME': 'neighbors_hub_db',
+        'HOST': os.getenv('DB_HOST'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'PORT': os.getenv('DB_PORT'),
+        'NAME': os.getenv('DB_NAME'),
     }
 }
 
@@ -140,8 +143,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.CustomerUser'
 
 REDIS_ENGINE = {
-    'host': '127.0.0.1',
-    'port': 6379
+    'host': os.getenv('REDIS_IP'),
+    'port': os.getenv('REDIS_PORT')
 }
 
 JWT_AUTH_TIME_DELTA = 30  # days
@@ -157,6 +160,6 @@ GDAL_LIBRARY_PATH = '/lib/libgdal.so'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, '')
 
-GOOGLE_OAUTH2_CLIENT_ID = '1092960991760-7ih57lpsujsf5at6toka7o0vd24ogm21.apps.googleusercontent.com'
-GOOGLE_OAUTH2_CLIENT_SECRET = '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'
+GOOGLE_OAUTH2_CLIENT_ID = os.getenv('GOOGLE_OAUTH2_CLIENT_ID')
+GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET')
 BASE_FRONTEND_URL = 'http://neighborshub.ca/'

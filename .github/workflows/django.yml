@@ -12,6 +12,19 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    env:
+      DB_HOST: ${{secrets.DB_HOST}}
+      DB_NAME: ${{secrets.DB_NAME}}
+      DB_PASSWORD: ${{secrets.DB_PASSWORD}}
+      DB_PORT: ${{secrets.DB_PORT}}
+      DB_USER: ${{secrets.DB_USER}}
+      GOOGLE_OAUTH2_CLIENT_ID: ${{secrets.GOOGLE_OAUTH2_CLIENT_ID}}
+      GOOGLE_OAUTH2_CLIENT_SECRET: ${{secrets.GOOGLE_OAUTH2_CLIENT_SECRET}}
+      REDIS_IP: ${{secrets.REDIS_IP}}
+      REDIS_PORT: ${{secrets.REDIS_PORT}}
+      SERVER_HOST: ${{secrets.SERVER_HOST}}
+      SERVER_USERNAME: ${{secrets.SERVER_USERNAME}}
+
     services:
       redis:
         image: redis
@@ -32,9 +45,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         env:
-          POSTGRES_DB: neighbors_hub_db
-          POSTGRES_USER: root
-          POSTGRES_PASSWORD: 12345
+          POSTGRES_DB: ${{ secrets.DB_NAME }}
+          POSTGRES_USER: ${{ secrets.DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
           POSTGRES_INITDB_ARGS: "--data-checksums"
 
     strategy:
