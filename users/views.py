@@ -1,5 +1,6 @@
 import datetime
 
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 
@@ -15,12 +16,13 @@ from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from NeighborsHub.utils import create_random_chars
 from core.models import City
+from users.google_oath2 import google_get_access_token, google_get_user_info
 from users.models import CustomerUser, validate_email, Address, Follow
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
     VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
     VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer, UpdateUserPasswordSerializer, UpdateMobileSerializer, \
-    VerifyUpdateMobileSerializer
+    VerifyUpdateMobileSerializer, GoogleOATHLoginSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -521,3 +523,40 @@ class UnfollowUserAPI(APIView):
 
         Follow.objects.filter(following=user_to_follow, follower=user).delete()
         return Response(data={"status": "ok", "message": _('User unfollowed successfully')})
+
+
+class GoogleLoginAPI(APIView):
+    @staticmethod
+    def create_user(email, first_name, last_name):
+        user = get_user_model().objects.create(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            is_verified_email=True,
+            verified_email_at=timezone.now(),
+            mobile=None,
+        )
+        return user
+
+    def get(self, request, *args, **kwargs):
+        serializer = GoogleOATHLoginSerializer(data=request.GET)
+        serializer.is_valid(raise_exception=True)
+        code = serializer.validated_data.get('code')
+        error = serializer.validated_data.get('error')
+
+        if error or not code:
+            return Response(data={"status": "error", "data": {}, "message": _('Google login unsuccessfull')},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        redirect_uri = f'{settings.BASE_FRONTEND_URL}/google/'
+        access_token = google_get_access_token(code=code, redirect_uri=redirect_uri)
+        user_data = google_get_user_info(access_token=access_token)
+        try:
+            user = get_user_model().objects.get(email=user_data['email'])
+        except CustomerUser.DoesNotExist:
+            user = self.create_user(user_data['email'], user_data.get('given_name'), user_data.get('family_name'))
+
+        jwt = generate_auth_token(issued_for="Authorization", user_id=user.id)
+        # save token in redis
+        AuthenticationTokenRedis().create(jwt, user.id)
+        return Response(data={"status": "ok", "data": {"access_token": f"Bearer {jwt}"}})
