@@ -549,8 +549,8 @@ class GoogleLoginAPI(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         redirect_uri = f'{settings.BASE_FRONTEND_URL}/google/'
-        access_token = google_get_access_token(code=code, redirect_uri=redirect_uri)
-        user_data = google_get_user_info(access_token=access_token)
+        # access_token = google_get_access_token(code=code, redirect_uri=redirect_uri)
+        user_data = google_get_user_info(access_token=code)
         try:
             user = get_user_model().objects.get(email=user_data['email'])
         except CustomerUser.DoesNotExist:
