@@ -1,9 +1,6 @@
 from django.db import models
-from users.models import CustomerUser
 from core.models import BaseModel
 
-
-# Create your models here.
 
 class Media(BaseModel):
     file = models.FileField(upload_to='media/')
@@ -14,4 +11,8 @@ class Media(BaseModel):
 
 class UserAvatar(BaseModel):
     avatar = models.ForeignKey(Media, null=True, blank=True, on_delete=models.PROTECT)
-    user = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT)
+    user = models.ForeignKey('users.CustomerUser', null=True, blank=True, on_delete=models.PROTECT, related_name='avatar')
+
+    def __str__(self):
+        return f"UserAvatar(user_id: {self.user_id} - filename:{self.avatar.file.name})"
+

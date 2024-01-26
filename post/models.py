@@ -18,7 +18,8 @@ class Post(BaseModel):
     title = models.CharField(max_length=255)
     body = models.TextField()
     media = models.ManyToManyField(Media, null=True, blank=True)
-    address = models.ForeignKey(Address, related_name='post_address', on_delete=models.DO_NOTHING)
+    address = models.ForeignKey(Address, null=True, blank=True,
+                                related_name='post_address', on_delete=models.DO_NOTHING)
 
     objects = PostManager()
 

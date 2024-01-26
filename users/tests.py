@@ -529,6 +529,29 @@ class TestVerifyOtpLoginUser(TestCase):
             self.assertIn('Bearer ', response_json['data']['access_token'])
 
 
+class TestRetrieveUpdateUser(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_exist_api(self):
+        response = self.client.get(
+            reverse('user_detail_update'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_successful_user_info(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(
+            reverse('user_detail_update'), data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual(USER_VALID_DATA['first_name'], response_json['data']['user']['first_name'])
+        self.assertEqual(USER_VALID_DATA['last_name'], response_json['data']['user']['last_name'])
+        self.assertEqual(USER_VALID_DATA['email'], response_json['data']['user']['email'])
+        self.assertEqual(USER_VALID_DATA['mobile'], response_json['data']['user']['mobile'])
+
+
 class TestSendForgetPasswordUser(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
@@ -1009,3 +1032,35 @@ class TestUnfollowUser(TestCase):
         self.assertEqual('ok', response_json['status'])
         self.assertEqual('User unfollowed successfully', response_json['message'])
         self.assertFalse(Follow.objects.filter(follower=self.user, following=self.user_to_follow).exists())
+
+
+class TestUserDetail(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.user_requested = baker.make(get_user_model(), is_verified_email=True)
+
+    def test_exist_api(self):
+        response = self.client.get(reverse('user_detail',
+                                           kwargs={'user_pk': self.user.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unfollow_successful(self):
+        address = baker.make(Address, created_by=self.user)
+        baker.make('post.Post', created_by=self.user, address=address, _quantity=2)
+        baker.make(Follow, follower=self.user, _quantity=3)
+        baker.make(Follow, following=self.user, _quantity=4)
+        self.client.force_authenticate(self.user_requested)
+        response = self.client.get(reverse('user_detail',
+                                           kwargs={'user_pk': self.user.id}),
+                                   data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual(USER_VALID_DATA['first_name'], response_json['data']['user']['first_name'])
+        self.assertEqual(USER_VALID_DATA['last_name'], response_json['data']['user']['last_name'])
+        self.assertEqual(USER_VALID_DATA['email'], response_json['data']['user']['email'])
+        self.assertEqual(USER_VALID_DATA['mobile'], response_json['data']['user']['mobile'])
+        self.assertEqual(4, response_json['data']['user']['follower_count'])
+        self.assertEqual(3, response_json['data']['user']['following_count'])
+        self.assertEqual(2, response_json['data']['user']['posts_count'])

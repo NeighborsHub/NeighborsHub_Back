@@ -5,7 +5,7 @@ from users.views import PreRegisterAPI, VerifyPreRegisterAPI, RegisterAPI, Verif
     VerifyMobileApi, SendOtpLoginApi, VerifyOtpLoginApi, SendForgetPasswordApi, VerifyOtpForgetPasswordApi, \
     VerifyEmailForgetPasswordAPI, VerifyOTPEmailAPI, ListCreateUserAddressAPI, RetrieveUpdateUserAddressAPI, \
     UpdateUserPasswordAPI, RequestSendOTPUpdateMobile, VerifySendOTPUpdateMobile, UnfollowUserAPI, FollowUserApi, \
-    GoogleLoginAPI
+    GoogleLoginAPI, RetrieveUpdateUserAPI, UserDetailAPI
 
 urlpatterns = [
     path('auth/pre-register', PreRegisterAPI.as_view(), name='user_preregister'),
@@ -26,12 +26,14 @@ urlpatterns = [
          name='verify_otp_forget_password'),
     path('auth/verify-email-forget-password/<str:token>', VerifyEmailForgetPasswordAPI.as_view(),
          name='verify_email_forget_password'),
+    path('me', RetrieveUpdateUserAPI.as_view(), name='user_detail_update'),
     path('me/address', ListCreateUserAddressAPI.as_view(), name='user_list_create_address'),
     path('me/address/<int:pk>', RetrieveUpdateUserAddressAPI.as_view(), name='user_get_update_address'),
     path('me/update-password', UpdateUserPasswordAPI.as_view(), name='user_update_password'),
     path('me/update-mobile', RequestSendOTPUpdateMobile.as_view(), name='user_update_mobile'),
     path('me/verify-update-mobile', VerifySendOTPUpdateMobile.as_view(), name='user_verify_update_mobile'),
-    path('<int:user_pk>/follow', FollowUserApi.as_view(), name='user_follow'),
-    path('<int:user_pk>/unfollow', UnfollowUserAPI.as_view(), name='user_unfollow'),
+    path('user/<int:user_pk>/follow', FollowUserApi.as_view(), name='user_follow'),
+    path('user/<int:user_pk>/unfollow', UnfollowUserAPI.as_view(), name='user_unfollow'),
+    path('user/<int:user_pk>', UserDetailAPI.as_view(), name='user_detail'),
 
 ]

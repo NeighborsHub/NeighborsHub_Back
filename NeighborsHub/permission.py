@@ -48,3 +48,9 @@ class IsOwnerAuthentication(BasePermission):
             return obj.user == request.user
         else:
             return obj.created_by == request.user
+
+
+class IsVerifiedUserPermission(BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        return request.user.is_verified_email or request.user.is_verified_mobile

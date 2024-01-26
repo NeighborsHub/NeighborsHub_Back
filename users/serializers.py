@@ -3,6 +3,7 @@ from django.utils.translation import gettext as _
 from django.contrib.auth import get_user_model
 from rest_framework_gis.serializers import GeoModelSerializer
 
+from albums.serializers import UserAvatarSerializer
 from core.serializers import CitySerializer
 from users.models import validate_email, validate_mobile, Address
 import re
@@ -197,9 +198,54 @@ class VerifyOtpForgetPasswordSerializer(VerifyOtpMobileSerializer, VerifyEmailFo
 
 
 class UserSerializer(serializers.ModelSerializer):
+    email = serializers.CharField(read_only=True)
+    mobile = serializers.CharField(read_only=True)
+    avatar = serializers.SerializerMethodField('get_last_user_avatar')
+    follower_count = serializers.SerializerMethodField('get_user_follower_count')
+    following_count = serializers.SerializerMethodField('get_user_following_count')
+    posts_count = serializers.SerializerMethodField('get_user_posts_count')
+
+    def get_user_follower_count(self, obj):
+        return obj.following.count()
+
+    def get_user_following_count(self, obj):
+        return obj.follower.count()
+
+    def get_user_posts_count(self, obj):
+        return obj.posts_created_by.count()
+
+    def get_last_user_avatar(self, obj):
+        qs = obj.avatar.last()
+        return UserAvatarSerializer(instance=qs, many=False).data
+
+    #
     class Meta:
         model = get_user_model()
-        fields = ['first_name', 'last_name', 'email', 'mobile', 'id']
+        fields = ['first_name', 'last_name', 'email', 'mobile', 'id', 'avatar', 'follower_count', 'following_count',
+                  'posts_count']
+
+
+class UserPublicSerializer(serializers.ModelSerializer):
+    email = serializers.SerializerMethodField('get_user_public_email')
+    mobile = serializers.SerializerMethodField('get_user_public_mobile')
+    avatar = serializers.SerializerMethodField('get_last_user_avatar')
+
+    def get_user_public_email(self, obj):
+        if obj.email is not None:
+            return f"{obj.email[:2]}***{obj.email[-5:]}"
+
+    def get_user_public_mobile(self, obj):
+        if obj.mobile is not None:
+            return f"{obj.mobile[:3]}***{obj.mobile[-2:]}"
+
+    def get_last_user_avatar(self, obj):
+        qs = obj.avatar.last()
+        return UserAvatarSerializer(instance=qs, many=False).data
+
+    #
+    class Meta:
+        model = get_user_model()
+        fields = ['first_name', 'last_name', 'email', 'mobile', 'id', 'avatar']
 
 
 class ListCreateAddressSerializer(GeoModelSerializer):

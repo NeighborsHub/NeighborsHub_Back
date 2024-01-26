@@ -6,7 +6,7 @@ from albums.models import Media
 from albums.serializers import MediaSerializer
 from post.models import Post, Comment, Like, LikePost
 from users.models import Address
-from users.serializers import UserSerializer, AddressSerializer
+from users.serializers import UserSerializer, AddressSerializer, UserPublicSerializer
 
 
 class TruncatedTextField(serializers.CharField):
@@ -17,7 +17,7 @@ class TruncatedTextField(serializers.CharField):
 
 
 class RetrievePostSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True)
+    created_by = UserPublicSerializer(read_only=True)
     address = AddressSerializer(read_only=True)
     title = serializers.CharField(max_length=100, allow_null=True)
     body = serializers.CharField(allow_null=False)
@@ -79,7 +79,7 @@ class PostSerializer(serializers.ModelSerializer):
 
 
 class MyListPostSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True)
+    created_by = UserPublicSerializer(read_only=True)
     address = AddressSerializer(read_only=True)
     title = serializers.CharField(max_length=100)
     body = TruncatedTextField(max_length=100)
@@ -148,7 +148,7 @@ class ListCommentSerializer(serializers.ModelSerializer):
 
 
 class LikePostSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True)
+    created_by = UserPublicSerializer(read_only=True)
     type = serializers.ChoiceField(default='like', choices=Like.LIKE_CHOICES)
     created_at = serializers.DateTimeField(read_only=True)
 
@@ -158,7 +158,7 @@ class LikePostSerializer(serializers.ModelSerializer):
 
 
 class LikeCommentSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True)
+    created_by = UserPublicSerializer(read_only=True)
     type = serializers.ChoiceField(default='like', choices=Like.LIKE_CHOICES)
     created_at = serializers.DateTimeField(read_only=True)
 

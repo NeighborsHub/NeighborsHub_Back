@@ -12,7 +12,7 @@ from django.utils.translation import gettext as _
 
 from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExistAPIException, NotValidOTPAPIException, \
     IncorrectUsernamePasswordException, ObjectNotFoundException
-from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication
+from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, IsVerifiedUserPermission
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from NeighborsHub.utils import create_random_chars
 from core.models import City
@@ -22,7 +22,7 @@ from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
     VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
     VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer, UpdateUserPasswordSerializer, UpdateMobileSerializer, \
-    VerifyUpdateMobileSerializer, GoogleOATHLoginSerializer
+    VerifyUpdateMobileSerializer, GoogleOATHLoginSerializer, UserSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -412,6 +412,15 @@ class ListCreateUserAddressAPI(ExpressiveCreateModelMixin, ExpressiveListModelMi
         return Address.objects.filter(user=self.request.user)
 
 
+class RetrieveUpdateUserAPI(ExpressiveRetrieveModelMixin, generics.RetrieveUpdateAPIView):
+    authentication_classes = (CustomAuthentication,)
+    serializer_class = UserSerializer
+    singular_name = 'user'
+
+    def get_object(self):
+        return CustomerUser.objects.get(id=self.request.user.id)
+
+
 class RetrieveUpdateUserAddressAPI(ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin,
                                    generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = (CustomAuthentication,)
@@ -560,3 +569,18 @@ class GoogleLoginAPI(APIView):
         # save token in redis
         AuthenticationTokenRedis().create(jwt, user.id)
         return Response(data={"status": "ok", "data": {"access_token": f"Bearer {jwt}"}})
+
+
+class UserDetailAPI(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
+    authentication_classes = (CustomAuthentication,)
+    permission_classes = (IsVerifiedUserPermission,)
+    serializer_class = UserSerializer
+    singular_name = 'user'
+
+    def get_object(self):
+        self.check_permissions(self.request)
+        try:
+            obj = CustomerUser.objects.get(pk=self.kwargs['user_pk'])
+        except CustomerUser.DoesNotExist:
+            raise ObjectNotFoundException
+        return obj
