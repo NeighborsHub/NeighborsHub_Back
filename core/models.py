@@ -1,7 +1,6 @@
 from django.contrib.gis.db import models
-
 from django.contrib.gis.geos import Point
-from django.contrib.gis.db.models.functions import Distance
+from django.db.models.expressions import RawSQL
 
 
 # Create your models here.
@@ -68,7 +67,9 @@ class State(models.Model):
 
 class CityManager(models.Manager):
     def find_nearest_city(self, location_point: Point):
-        return self.annotate(distance=Distance('location', location_point)).order_by('distance').first()
+        return self.annotate(distance=RawSQL(
+            f'ST_Distance("core_city"."location", ST_GeomFromEWKB(%s::bytea))', (location_point.ewkb,),
+            output_field=models.FloatField())).order_by('distance').first()
 
 
 class City(models.Model):
