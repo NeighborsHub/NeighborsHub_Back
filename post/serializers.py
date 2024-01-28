@@ -90,7 +90,7 @@ class MyListPostSerializer(serializers.ModelSerializer):
     def get_truncated_medias(self, obj):
         qs = obj.media.all()
         qs = qs[:2] if qs is not None and qs.count() > 2 else qs
-        return MediaSerializer(instance=qs, many=True).data
+        return MediaSerializer(instance=qs, many=True, context=self.context).data
 
     def get_likes_count(self, obj):
         res = LikePost.objects.filter(post_id=obj.id).values('type').annotate(count=Count('type'))
