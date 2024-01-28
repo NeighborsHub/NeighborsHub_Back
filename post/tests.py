@@ -224,6 +224,23 @@ class TestListPost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(2, response_json['data']['posts']['count'])
 
+    def test_successful(self):
+        params = {'longitude': -75.5673, 'latitude': 40.5432, 'distance': 1000}
+        response = self.client.get(reverse('post_list'),data=params, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertIn('count', response_json['data']['posts'])
+        self.assertIn('results', response_json['data']['posts'])
+        self.assertIn('created_by', response_json['data']['posts']['results'][0])
+        self.assertIn('address', response_json['data']['posts']['results'][0])
+        self.assertIn('body', response_json['data']['posts']['results'][0])
+        self.assertIn('title', response_json['data']['posts']['results'][0])
+        self.assertIn('media', response_json['data']['posts']['results'][0])
+        self.assertIn('distance', response_json['data']['posts']['results'][0])
+        self.assertIn('likes', response_json['data']['posts']['results'][0])
+        self.assertIn('is_user_liked', response_json['data']['posts']['results'][0])
+
 
 class TestListCountLocationPost(TestCase):
     def setUp(self) -> None:

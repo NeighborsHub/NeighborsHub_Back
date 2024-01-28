@@ -2,7 +2,9 @@ import re
 
 from django.db import models
 from django.contrib.gis.geos import Point
-from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.db.models.functions import GeometryDistance
+
+
 from albums.models import Media
 from core.models import BaseModel, Hashtag
 from users.models import Address
@@ -10,7 +12,7 @@ from users.models import Address
 
 class PostManager(models.Manager):
     def filter_post_distance_of_location(self, location_point: Point, distance):
-        return self.annotate(distance=Distance('address__location', location_point)).filter(distance__lt=distance)
+        return self.annotate(distance=GeometryDistance('address__location', location_point)).filter(distance__lt=distance)
 
 
 class Post(BaseModel):
@@ -19,7 +21,7 @@ class Post(BaseModel):
     body = models.TextField()
     media = models.ManyToManyField(Media, null=True, blank=True)
     address = models.ForeignKey(Address, null=True, blank=True,
-                                related_name='post_address', on_delete=models.DO_NOTHING)
+                                related_name='post_address', on_delete=models.CASCADE)
 
     objects = PostManager()
 

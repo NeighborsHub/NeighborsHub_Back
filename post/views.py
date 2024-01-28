@@ -12,7 +12,7 @@ from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication,
 from post.filters import ListPostFilter
 from post.models import Post, Comment, LikePost, LikeComment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
-    LikePostSerializer, LikeCommentSerializer, ListCountLocationPostsSerializer
+    LikePostSerializer, LikeCommentSerializer, ListCountLocationPostsSerializer, PublicListPostSerializer
 from post.models import Post, Comment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
     RetrievePostSerializer
@@ -82,8 +82,7 @@ class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
 
 class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     authentication_classes = (CustomAuthenticationWithoutEffect,)
-    serializer_class = MyListPostSerializer
-    queryset = Post.objects.all()
+    serializer_class = PublicListPostSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = ListPostFilter
     plural_name = 'posts'
@@ -111,18 +110,29 @@ class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     filterset_class = ListPostFilter
     plural_name = 'posts'
 
-    def get_queryset(self):
-        if (self.request.query_params.get('latitude') is not None and
-                self.request.query_params.get('longitude') is not None):
+    def get_location_post(self, posts):
+        if (self.request.query_params.get('post_latitude') is not None and
+                self.request.query_params.get('post_longitude') is not None):
+            posts_location = Point(float(self.request.query_params.get('post_latitude')),
+                                  float(self.request.query_params.get('post_longitude')),
+                                  srid=4326)
+            return posts.filter_post_distance_of_location(posts_location, 0)
+        return posts
+
+    def get_user_near_post(self, posts):
+        if (self.request.query_params.get('user_latitude') is not None and
+                self.request.query_params.get('user_longitude') is not None):
             user_location = Point(float(self.request.query_params.get('latitude')),
                                   float(self.request.query_params.get('longitude')),
                                   srid=4326)
-            posts = Post.objects.filter_post_distance_of_location(user_location,
-                                                                  distance=int(
-                                                                      self.request.query_params.get('distance')))
-        else:
-            posts = Post.objects.all()
+            return posts.filter_post_distance_of_location(user_location, distance=int(
+                self.request.query_params.get('user_distance', 1000)))
+        return posts
 
+    def get_queryset(self):
+        posts = Post.objects.all()
+        posts = self.get_location_post(posts)
+        posts = self.get_user_near_post(posts)
         posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
         posts = posts.values('address__location').annotate(posts_count=Count('address__location'))
         return posts

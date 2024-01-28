@@ -106,6 +106,14 @@ class MyListPostSerializer(serializers.ModelSerializer):
         fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'likes', 'is_user_liked')
 
 
+class PublicListPostSerializer(MyListPostSerializer):
+    distance = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Post
+        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'distance', 'likes', 'is_user_liked')
+
+
 class ListCountLocationPostsSerializer(GeoModelSerializer):
     posts_count = serializers.IntegerField(read_only=True)
     location = GeometryField(source='address__location')
