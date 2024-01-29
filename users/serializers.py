@@ -258,7 +258,7 @@ class ListCreateAddressSerializer(GeoModelSerializer):
 
     class Meta:
         model = Address
-        geometry_field = "location"
+        geo_field = "location"
         fields = ['user', 'city', 'id', 'street', 'zip_code', 'is_main_address', 'city_id', 'user_id', 'location']
 
 
@@ -270,7 +270,7 @@ class AddressSerializer(GeoModelSerializer):
 
     class Meta:
         model = Address
-        geometry_field = "location"
+        geo_field = "location"
         fields = ['city', 'id', 'street', 'zip_code', 'is_main_address', 'location']
 
 

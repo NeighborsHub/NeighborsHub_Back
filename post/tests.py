@@ -121,7 +121,6 @@ class TestMyListPost(TestCase):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('user_post_list'), data={}, format='json')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(1, response_json['data']['posts']['count'])
@@ -194,8 +193,10 @@ class TestListPost(TestCase):
         self.user = _create_user()
         post_address = baker.make(Address, location=Point(40.5432, -75.5673), )
         dummy_address = baker.make(Address, location=Point(41.5435, -79.5680), )
-        baker.make(Post, address=post_address, _quantity=2, body="#hello_world")
+        medias = baker.make(Media, 5)
+        baker.make(Post, address=post_address, media=medias, _quantity=2, body="#hello_world")
         baker.make(Post, address=dummy_address, _quantity=10)
+        baker.make(Media, 2)
 
     def test_api_exists(self):
         response = self.client.get(reverse('post_list'), data={}, format='json')
@@ -209,12 +210,20 @@ class TestListPost(TestCase):
         self.assertEqual(12, response_json['data']['posts']['count'])
 
     def test_user_can_see_neighbors_posts(self):
-        params = {'user_longitude': -75.5673, 'user_latitude': 40.5432, 'distance': 100}
+        params = {'user_latitude': -75.5673, 'user_longitude': 40.5432, 'user_distance': 100}
         response = self.client.get(reverse('post_list'), data=params, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(2, response_json['data']['posts']['count'])
+
+    def test_not_exist_null_address(self):
+        Address.objects.all().delete()
+        response = self.client.get(reverse('post_list'), format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(0, response_json['data']['posts']['count'])
 
     def test_user_can_filter_by_hashtag(self):
         params = {'hashtag_title': 'hello_world'}
@@ -225,8 +234,11 @@ class TestListPost(TestCase):
         self.assertEqual(2, response_json['data']['posts']['count'])
 
     def test_successful(self):
-        params = {'user_longitude': -75.5673, 'user_latitude': 40.5432, 'distance': 1000}
-        response = self.client.get(reverse('post_list'),data=params, format='json')
+        params = {
+            'user_latitude': -75.5673, 'user_longitude': 40.5433, 'user_distance': 100,
+            'post_latitude': -75.5673, 'post_longitude': 40.5432,
+        }
+        response = self.client.get(reverse('post_list'), data=params, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
@@ -240,6 +252,8 @@ class TestListPost(TestCase):
         self.assertIn('distance', response_json['data']['posts']['results'][0])
         self.assertIn('likes', response_json['data']['posts']['results'][0])
         self.assertIn('is_user_liked', response_json['data']['posts']['results'][0])
+        self.assertEqual(2, response_json['data']['posts']['results'][0]['distance'])
+        self.assertEqual(2, len(response_json['data']['posts']['results'][0]['media']))
 
 
 class TestListCountLocationPost(TestCase):
@@ -260,7 +274,6 @@ class TestListCountLocationPost(TestCase):
     def test_paginated_posts_location(self):
         response = self.client.get(reverse('post_location_count', ), data={}, format='json')
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(3, response_json['data']['posts']['count'])

@@ -2,8 +2,7 @@ import re
 
 from django.db import models
 from django.contrib.gis.geos import Point
-from django.contrib.gis.db.models.functions import GeometryDistance
-
+from django.contrib.gis.db.models.functions import Distance
 
 from albums.models import Media
 from core.models import BaseModel, Hashtag
@@ -12,7 +11,21 @@ from users.models import Address
 
 class PostManager(models.Manager):
     def filter_post_distance_of_location(self, location_point: Point, distance):
-        return self.annotate(distance=GeometryDistance('address__location', location_point)).filter(distance__lt=distance)
+        return self.annotate(
+            distance=Distance('address__location', location_point, output_field=models.FloatField())).filter(
+            distance__lt=distance)
+
+    def filter_post_location(self, post_location: Point):
+        return self.filter(address__location=post_location)
+
+    def filter_posts_location_user_distance(self, user_location, post_location, user_distance=1000):
+        posts = self.filter(address__isnull=False)
+        posts = posts.filter(address__location=post_location) if post_location is not None else posts
+        if user_location is not None:
+            posts = posts.annotate(distance=Distance(
+                'address__location', user_location, output_field=models.FloatField())
+            ).filter(distance__lt=user_distance)
+        return posts
 
 
 class Post(BaseModel):
@@ -21,7 +34,7 @@ class Post(BaseModel):
     body = models.TextField()
     media = models.ManyToManyField(Media, null=True, blank=True)
     address = models.ForeignKey(Address, null=True, blank=True,
-                                related_name='post_address', on_delete=models.CASCADE)
+                                related_name='post_address', on_delete=models.SET_NULL)
 
     objects = PostManager()
 

@@ -118,8 +118,6 @@ class Address(BaseModel):
             Address.objects.filter(user=self.user).update(is_main_address=False)
         super().save(*args, **kwargs)
 
-
-
     def __str__(self):
         return (f"Address(id={self.id}, status={self.state}, user_id={self.user.id},  "
                 f"created_at={self.created_at}, updated_at={self.updated_at})")

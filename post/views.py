@@ -87,18 +87,26 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     filterset_class = ListPostFilter
     plural_name = 'posts'
 
-    def get_queryset(self):
-        if (self.request.query_params.get('latitude') is not None and
-                self.request.query_params.get('longitude') is not None):
-            user_location = Point(float(self.request.query_params.get('latitude')),
-                                  float(self.request.query_params.get('longitude')),
-                                  srid=4326)
-            posts = Post.objects.filter_post_distance_of_location(user_location,
-                                                                  distance=int(
-                                                                      self.request.query_params.get('distance')))
-        else:
-            posts = Post.objects.all()
+    def get_user_location_point(self):
+        if (self.request.query_params.get('user_latitude') is not None and
+                self.request.query_params.get('user_longitude') is not None):
+            return Point(float(self.request.query_params.get('user_longitude')),
+                         float(self.request.query_params.get('user_latitude')),
+                         srid=4326)
 
+    def get_post_location_point(self):
+        if (self.request.query_params.get('post_latitude') is not None and
+                self.request.query_params.get('post_longitude') is not None):
+            return Point(float(self.request.query_params.get('post_longitude')),
+                         float(self.request.query_params.get('post_latitude')),
+                         srid=4326)
+
+    def get_queryset(self):
+        posts = Post.objects.filter_posts_location_user_distance(
+            user_location=self.get_user_location_point(),
+            post_location=self.get_post_location_point(),
+            user_distance=int(self.request.query_params.get('user_distance', 1000)
+                              ))
         posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
         return posts
 
@@ -110,20 +118,11 @@ class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     filterset_class = ListPostFilter
     plural_name = 'posts'
 
-    def get_location_post(self, posts):
-        if (self.request.query_params.get('post_latitude') is not None and
-                self.request.query_params.get('post_longitude') is not None):
-            posts_location = Point(float(self.request.query_params.get('post_latitude')),
-                                  float(self.request.query_params.get('post_longitude')),
-                                  srid=4326)
-            return posts.filter_post_distance_of_location(posts_location, 0)
-        return posts
-
     def get_user_near_post(self, posts):
         if (self.request.query_params.get('user_latitude') is not None and
                 self.request.query_params.get('user_longitude') is not None):
-            user_location = Point(float(self.request.query_params.get('latitude')),
-                                  float(self.request.query_params.get('longitude')),
+            user_location = Point(float(self.request.query_params.get('user_latitude')),
+                                  float(self.request.query_params.get('user_latitude')),
                                   srid=4326)
             return posts.filter_post_distance_of_location(user_location, distance=int(
                 self.request.query_params.get('user_distance', 1000)))
@@ -131,7 +130,6 @@ class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
 
     def get_queryset(self):
         posts = Post.objects.all()
-        posts = self.get_location_post(posts)
         posts = self.get_user_near_post(posts)
         posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
         posts = posts.values('address__location').annotate(posts_count=Count('address__location'))
