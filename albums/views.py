@@ -34,3 +34,11 @@ class MyListAvatarsAPI(ExpressiveListModelMixin, ExpressiveCreateModelMixin, gen
 
     def get_queryset(self):
         return UserAvatar.objects.filter(user=self.request.user, created_by=self.request.user)
+
+
+class UserListAvatarsAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    serializer_class = UserAvatarSerializer
+    plural_name = 'avatars'
+
+    def get_queryset(self):
+        return UserAvatar.objects.filter(user=self.kwargs['user_pk'], created_by=self.kwargs['user_pk'])
