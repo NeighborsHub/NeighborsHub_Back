@@ -32,7 +32,7 @@ class Post(BaseModel):
     hashtags = models.ManyToManyField(Hashtag, blank=True, through='PostHashtag')
     title = models.CharField(max_length=255)
     body = models.TextField()
-    media = models.ManyToManyField(Media, null=True, blank=True)
+    media = models.ManyToManyField(Media, null=True, blank=True, related_name='post')
     address = models.ForeignKey(Address, null=True, blank=True,
                                 related_name='post_address', on_delete=models.SET_NULL)
 

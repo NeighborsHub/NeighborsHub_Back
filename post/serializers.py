@@ -173,3 +173,13 @@ class LikeCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = LikePost
         fields = ('id', 'type', 'created_by', 'created_at')
+
+
+class TruncatePostSerializer(GeoModelSerializer):
+    title = TruncatedTextField(max_length=20)
+    body = TruncatedTextField(max_length=100)
+
+    class Meta:
+        model = Post
+        geo_field = "location"
+        fields = ['id', 'title', 'body']

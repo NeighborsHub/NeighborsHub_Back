@@ -3,8 +3,10 @@ async-timeout==4.0.3
 certifi==2023.11.17
 charset-normalizer==3.3.2
 Django==4.2.7
+django-appconf==1.0.6
 django-cors-headers==4.3.1
 django-filter==23.5
+django-imagekit==5.0.0
 django-modeltranslation==0.18.11
 django-taggit==5.0.1
 djangorestframework==3.14.0
@@ -12,7 +14,10 @@ djangorestframework-gis==1.0
 idna==3.6
 Markdown==3.5.1
 model-bakery==1.17.0
+pilkit==3.0
+pillow==10.2.0
 postgis==1.0.4
+psycopg2==2.9.9
 psycopg2-binary==2.9.9
 PyJWT==2.8.0
 python-dotenv==1.0.0
