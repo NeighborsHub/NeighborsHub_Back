@@ -42,7 +42,6 @@ class TestMyListMedias(TestCase):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('media_mylist'))
         response_json = response.json()
-        print(response_json)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual('ok', response_json['status'])
         self.assertIn('medias', response_json['data'])

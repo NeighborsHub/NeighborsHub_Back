@@ -1,3 +1,4 @@
+from django.core.validators import FileExtensionValidator
 from django.db.models import Count
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoModelSerializer, GeometryField
@@ -40,7 +41,11 @@ class PostSerializer(serializers.ModelSerializer):
     title = serializers.CharField(max_length=100, allow_null=True)
     body = serializers.CharField(allow_null=False)
     medias = serializers.ListField(
-        child=serializers.FileField(max_length=1000000, allow_empty_file=False, use_url=False),
+        child=serializers.FileField(max_length=1000000, allow_empty_file=False, use_url=False,
+                                    validators=[FileExtensionValidator(
+                                        allowed_extensions=['png', 'jpeg', 'jpg', 'svg', 'gif',
+                                                            'mp4', 'mkv', 'mpv', 'webm'])]
+                                    ),
         write_only=True, required=False
     )
     media = MediaSerializer(many=True, read_only=True)
@@ -83,14 +88,9 @@ class MyListPostSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True)
     title = serializers.CharField(max_length=100)
     body = TruncatedTextField(max_length=100)
-    media = serializers.SerializerMethodField('get_truncated_medias')
+    media = MediaSerializer(read_only=True, many=True,)
     likes = serializers.SerializerMethodField('get_likes_count')
     is_user_liked = serializers.SerializerMethodField('get_is_user_like')
-
-    def get_truncated_medias(self, obj):
-        qs = obj.media.all()
-        qs = qs[:2] if qs is not None and qs.count() > 2 else qs
-        return MediaSerializer(instance=qs, many=True, context=self.context).data
 
     def get_likes_count(self, obj):
         res = LikePost.objects.filter(post_id=obj.id).values('type').annotate(count=Count('type'))

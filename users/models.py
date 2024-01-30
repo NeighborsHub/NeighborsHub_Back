@@ -77,6 +77,7 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     verified_email_at = models.DateTimeField(blank=True, null=True)
     verified_mobile_at = models.DateTimeField(blank=True, null=True)
+    unique_id = models.CharField(default=uuid4().hex)
     objects = CustomUserManager()
 
     def save(self, *args, **kwargs):

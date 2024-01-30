@@ -253,7 +253,7 @@ class TestListPost(TestCase):
         self.assertIn('likes', response_json['data']['posts']['results'][0])
         self.assertIn('is_user_liked', response_json['data']['posts']['results'][0])
         self.assertEqual(2, response_json['data']['posts']['results'][0]['distance'])
-        self.assertEqual(2, len(response_json['data']['posts']['results'][0]['media']))
+        self.assertEqual(5, len(response_json['data']['posts']['results'][0]['media']))
 
 
 class TestListCountLocationPost(TestCase):

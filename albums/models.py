@@ -1,11 +1,36 @@
+import os
+
 from django.db import models
+from django.conf import settings
+
 from core.models import BaseModel
 from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFill
+from django.utils.text import get_valid_filename
+
+from users.models import CustomerUser
+
+from django.core.files.storage import FileSystemStorage
+
+
+class UserFileSystemStorage(FileSystemStorage):
+
+    def get_available_name(self, name, max_length=None):
+        # Generate a unique filename
+        while self.exists(name):
+            name = self.get_valid_name(name)
+        return name
+
+    @staticmethod
+    def get_user_upload_path(obj: any, filename: str) -> str:
+        return os.path.join(f'{obj.created_by.unique_id}', get_valid_filename(filename))
+
+
+user_upload_storage = UserFileSystemStorage()
 
 
 class Media(BaseModel):
-    file = models.FileField(upload_to='media/')
+    file = models.FileField(upload_to=user_upload_storage.get_user_upload_path)
 
     def __str__(self):
         return self.file.name
