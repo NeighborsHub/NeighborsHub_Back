@@ -121,7 +121,7 @@ class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     def get_user_near_post(self, posts):
         if (self.request.query_params.get('user_latitude') is not None and
                 self.request.query_params.get('user_longitude') is not None):
-            user_location = Point(float(self.request.query_params.get('user_latitude')),
+            user_location = Point(float(self.request.query_params.get('user_longitude')),
                                   float(self.request.query_params.get('user_latitude')),
                                   srid=4326)
             return posts.filter_post_distance_of_location(user_location, distance=int(
