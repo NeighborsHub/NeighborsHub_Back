@@ -117,9 +117,11 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
 class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     authentication_classes = (CustomAuthenticationWithoutEffect,)
     serializer_class = ListCountLocationPostsSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [InBBoxFilter, DjangoFilterBackend, SearchFilter]
     filterset_class = ListPostFilter
     plural_name = 'posts'
+    bbox_filter_field = 'address__location'
+
 
     def get_user_near_post(self):
         if (self.request.query_params.get('user_latitude') is not None and
