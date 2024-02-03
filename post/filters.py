@@ -1,5 +1,7 @@
 import django_filters
 from django.db.models import Q
+from rest_framework_gis.filters import InBBoxFilter
+
 from .models import Post
 
 

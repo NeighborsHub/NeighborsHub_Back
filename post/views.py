@@ -4,6 +4,8 @@ from rest_framework import generics, status
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_gis.filters import InBBoxFilter
+from django.contrib.gis.geos import Polygon
 
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin, \
     ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
@@ -83,9 +85,10 @@ class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
 class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     authentication_classes = (CustomAuthenticationWithoutEffect,)
     serializer_class = PublicListPostSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [InBBoxFilter, DjangoFilterBackend, SearchFilter]
     filterset_class = ListPostFilter
     plural_name = 'posts'
+    bbox_filter_field = 'address__location'
 
     def get_user_location_point(self):
         if (self.request.query_params.get('user_latitude') is not None and

@@ -255,6 +255,17 @@ class TestListPost(TestCase):
         self.assertEqual(2, response_json['data']['posts']['results'][0]['distance'])
         self.assertEqual(5, len(response_json['data']['posts']['results'][0]['media']))
 
+    def test_successful_in_bbox(self):
+        params = {
+            'in_bbox': '40.5432,-75.5673,41.52,-75.55'
+        }
+        response = self.client.get(reverse('post_list'), data=params, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(2, response_json['data']['posts']['count'])
+
+
 
 class TestListCountLocationPost(TestCase):
     def setUp(self) -> None:
