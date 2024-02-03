@@ -297,6 +297,14 @@ class TestListCountLocationPost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(1, response_json['data']['posts']['count'])
 
+    def test_location_posts_in_bbox(self):
+        data = {'in_bbox': '40.5432,-75.5673,41.52,-75.55'}
+        response = self.client.get(reverse('post_location_count' ), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(1, response_json['data']['posts']['count'])
+
 
 class TsetCommentModel(TestCase):
     @staticmethod
