@@ -304,3 +304,7 @@ class VerifyUpdateMobileSerializer(serializers.ModelSerializer):
 class GoogleOATHLoginSerializer(serializers.Serializer):
     code = serializers.CharField(required=False)
     error = serializers.CharField(required=False)
+
+
+class GoogleSetPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(required=False)

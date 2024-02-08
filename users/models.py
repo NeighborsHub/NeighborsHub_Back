@@ -6,7 +6,7 @@ from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser, Group, UserManager
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Permission
 from django.db.models import Q
-from django.contrib.auth.models import BaseUserManager
+from django.utils.translation import gettext as _
 
 from NeighborsHub.exceptions import NotOwnAddressException
 from core.models import BaseModel, City, States, Hashtag
@@ -54,6 +54,7 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     is_superuser = models.BooleanField(default=False)  # a superus
     email = models.EmailField(unique=True, blank=True, null=True, max_length=100)
     username = models.CharField(max_length=50, unique=True)
+    password = models.CharField(_("password"), max_length=128, null=True)
     mobile = models.CharField(max_length=15, unique=True, blank=True, null=True, validators=[validate_mobile])
     first_name = models.CharField(max_length=30, null=True, blank=True)
     last_name = models.CharField(max_length=30, null=True, blank=True)

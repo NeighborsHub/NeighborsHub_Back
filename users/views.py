@@ -22,7 +22,7 @@ from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
     VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
     VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer, UpdateUserPasswordSerializer, UpdateMobileSerializer, \
-    VerifyUpdateMobileSerializer, GoogleOATHLoginSerializer, UserSerializer
+    VerifyUpdateMobileSerializer, GoogleOATHLoginSerializer, UserSerializer, GoogleSetPasswordSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -544,6 +544,7 @@ class GoogleLoginAPI(APIView):
             is_verified_email=True,
             verified_email_at=timezone.now(),
             mobile=None,
+            password=None
         )
         return user
 
@@ -554,7 +555,7 @@ class GoogleLoginAPI(APIView):
         error = serializer.validated_data.get('error')
 
         if error or not code:
-            return Response(data={"status": "error", "data": {}, "message": _('Google login unsuccessfull')},
+            return Response(data={"status": "error", "data": {}, "message": _('Google login unsuccessful')},
                             status=status.HTTP_400_BAD_REQUEST)
 
         redirect_uri = f'{settings.BASE_FRONTEND_URL}/google/'
@@ -562,13 +563,32 @@ class GoogleLoginAPI(APIView):
         user_data = google_get_user_info(access_token=code)
         try:
             user = get_user_model().objects.get(email=user_data['email'])
+            is_register = False
         except CustomerUser.DoesNotExist:
             user = self.create_user(user_data['email'], user_data.get('given_name'), user_data.get('family_name'))
-
+            is_register = True
         jwt = generate_auth_token(issued_for="Authorization", user_id=user.id)
         # save token in redis
         AuthenticationTokenRedis().create(jwt, user.id)
-        return Response(data={"status": "ok", "data": {"access_token": f"Bearer {jwt}"}})
+        return Response(data={"status": "ok", "data": {"access_token": f"Bearer {jwt}", "is_register": is_register}})
+
+
+class GoogleSetpasswordAPI(APIView):
+    authentication_classes = (CustomAuthentication,)
+    permission_classes = (IsVerifiedUserPermission,)
+
+    def post(self, request, *args, **kwargs):
+        serializer = GoogleSetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if self.request.user.password is not None:
+            return Response(data={"status": "error", "data": {},
+                                  "message": _('You set password before. Use other way to set new password')},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        self.request.user.set_password(serializer.validated_data['password'])
+        self.request.user.save()
+        return Response(data={"status": "ok", "data": {}, "message": _('Password saved')})
 
 
 class UserDetailAPI(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):

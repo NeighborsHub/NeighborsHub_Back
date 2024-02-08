@@ -1064,3 +1064,29 @@ class TestUserDetail(TestCase):
         self.assertEqual(4, response_json['data']['user']['follower_count'])
         self.assertEqual(3, response_json['data']['user']['following_count'])
         self.assertEqual(2, response_json['data']['user']['posts_count'])
+
+
+class TestUserSetPassword(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = baker.make(CustomerUser, email='john@gmail.com', password=None, is_verified_email=True)
+
+    def test_exist_api(self):
+        response = self.client.post(reverse('user_setpassword_google'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejects_user_have_password(self):
+        user = _create_user()
+        self.client.force_authenticate(user)
+        response = self.client.post(reverse('user_setpassword_google'), data={'password': '123'}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+
+    def test_set_password_successful(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(reverse('user_setpassword_google'), data={'password': '123'}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+
