@@ -16,7 +16,7 @@ from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication,
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from NeighborsHub.utils import create_random_chars
 from core.models import City
-from users.google_oath2 import google_get_access_token, google_get_user_info
+from users.google_oath2 import google_get_user_info
 from users.models import CustomerUser, validate_email, Address, Follow
 from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
@@ -558,8 +558,6 @@ class GoogleLoginAPI(APIView):
             return Response(data={"status": "error", "data": {}, "message": _('Google login unsuccessful')},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        redirect_uri = f'{settings.BASE_FRONTEND_URL}/google/'
-        # access_token = google_get_access_token(code=code, redirect_uri=redirect_uri)
         user_data = google_get_user_info(access_token=code)
         try:
             user = get_user_model().objects.get(email=user_data['email'])
