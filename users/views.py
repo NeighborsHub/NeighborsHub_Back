@@ -561,10 +561,10 @@ class GoogleLoginAPI(APIView):
         user_data = google_get_user_info(access_token=code)
         try:
             user = get_user_model().objects.get(email=user_data['email'])
-            is_register = False
+            is_register = True
         except CustomerUser.DoesNotExist:
             user = self.create_user(user_data['email'], user_data.get('given_name'), user_data.get('family_name'))
-            is_register = True
+            is_register = False
         jwt = generate_auth_token(issued_for="Authorization", user_id=user.id)
         # save token in redis
         AuthenticationTokenRedis().create(jwt, user.id)
