@@ -15,6 +15,7 @@ from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExis
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, IsVerifiedUserPermission
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from NeighborsHub.utils import create_random_chars
+from albums.models import UserAvatar
 from core.models import City
 from users.google_oath2 import google_get_user_info
 from users.models import CustomerUser, validate_email, Address, Follow
@@ -536,7 +537,7 @@ class UnfollowUserAPI(APIView):
 
 class GoogleLoginAPI(APIView):
     @staticmethod
-    def create_user(email, first_name, last_name):
+    def create_user(email, first_name, last_name, profile_url):
         user = get_user_model().objects.create(
             email=email,
             first_name=first_name,
@@ -546,6 +547,7 @@ class GoogleLoginAPI(APIView):
             mobile=None,
             password=None
         )
+        avatar = UserAvatar.save_from_url(image_url=profile_url, user=user)
         return user
 
     def get(self, request, *args, **kwargs):
@@ -563,7 +565,8 @@ class GoogleLoginAPI(APIView):
             user = get_user_model().objects.get(email=user_data['email'])
             is_register = True
         except CustomerUser.DoesNotExist:
-            user = self.create_user(user_data['email'], user_data.get('given_name'), user_data.get('family_name'))
+            user = self.create_user(user_data['email'], user_data.get('given_name'),
+                                    user_data.get('family_name'), user_data.get('picture'))
             is_register = False
         jwt = generate_auth_token(issued_for="Authorization", user_id=user.id)
         # save token in redis

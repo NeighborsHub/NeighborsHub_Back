@@ -216,7 +216,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_last_user_avatar(self, obj):
         qs = obj.avatar.last()
-        return UserAvatarSerializer(instance=qs, many=False).data
+        return UserAvatarSerializer(instance=qs, many=False, context=self.context).data
 
     #
     class Meta:

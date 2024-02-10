@@ -1,5 +1,8 @@
 import os
+from io import BytesIO
 
+import requests
+from django.core.files import File
 from django.db import models
 from django.conf import settings
 
@@ -47,3 +50,15 @@ class UserAvatar(BaseModel):
 
     def __str__(self):
         return f"UserAvatar(user_id: {self.user_id} - filename:{self.avatar.file.name})"
+
+    @staticmethod
+    def save_from_url(image_url, user):
+        response = requests.get(image_url)
+        if response.status_code == 200:
+            obj = UserAvatar()
+            image_io = BytesIO(response.content)
+            obj.avatar.save(image_url.split('/')[-1], File(image_io))
+            obj.user = user
+            obj.created_by = user
+            obj.updated_by = user
+            obj.save()
