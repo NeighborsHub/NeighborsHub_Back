@@ -91,22 +91,15 @@ WSGI_APPLICATION = 'NeighborsHub.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.contrib.gis.db.backends.postgis',
-    #     'HOST': os.getenv('DB_HOST'),
-    #     'USER': os.getenv('DB_USER'),
-    #     'PASSWORD': os.getenv('DB_PASSWORD'),
-    #     'PORT': os.getenv('DB_PORT'),
-    #     'NAME': os.getenv('DB_NAME'),
-    # }
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'HOST': '5.34.203.25',
-        'USER': 'noob',
-        'PASSWORD': 'milaD23571113',
-        'PORT': '2357',
-        'NAME': 'neighbors_hub_db',
+        'HOST': os.getenv('DB_HOST'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'PORT': os.getenv('DB_PORT'),
+        'NAME': os.getenv('DB_NAME'),
     }
+
 }
 
 # Password validation
