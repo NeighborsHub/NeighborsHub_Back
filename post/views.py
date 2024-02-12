@@ -108,8 +108,8 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
         posts = Post.objects.filter_posts_location_user_distance(
             user_location=self.get_user_location_point(),
             post_location=self.get_post_location_point(),
-            user_distance=int(self.request.query_params.get('user_distance', 1000)
-                              ))
+            user_distance=self.request.query_params.get('user_distance', None)
+                              )
         posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
         return posts
 
@@ -129,8 +129,8 @@ class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
             user_location = Point(float(self.request.query_params.get('user_longitude')),
                                   float(self.request.query_params.get('user_latitude')),
                                   srid=4326)
-            return Post.objects.filter_post_distance_of_location(user_location, distance=int(
-                self.request.query_params.get('user_distance', 1000)))
+            return Post.objects.filter_post_distance_of_location(user_location, distance=
+                self.request.query_params.get('user_distance', None))
         return Post.objects.all()
 
     def get_queryset(self):

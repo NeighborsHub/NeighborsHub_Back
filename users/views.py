@@ -134,7 +134,7 @@ class VerifyEmailAPI(APIView):
             raise TokenIsNotValidAPIException
 
         user.is_verified_email = True
-        user.verified_email_at = datetime.datetime.now()
+        user.verified_email_at = timezone.now()
         user.save()
         return Response({'status': 'ok'})
 
@@ -248,7 +248,7 @@ class VerifyMobileApi(APIView):
             raise NotValidOTPAPIException
         user.mobile = serializer.validated_data['mobile']
         user.is_verified_mobile = True
-        user.verified_mobile_at = datetime.datetime.now()
+        user.verified_mobile_at = timezone.now()
         user.save()
         return Response(data={"status": "ok", "data": {}, 'message': _('Mobile Saved')})
 
@@ -275,7 +275,7 @@ class VerifyOTPEmailAPI(APIView):
             raise NotValidOTPAPIException
         user.email = serializer.validated_data['email']
         user.is_verified_email = True
-        user.verified_email_at = datetime.datetime.now()
+        user.verified_email_at = timezone.now()
         user.save()
         return Response(data={"status": "ok", "data": {}, 'message': _('Email Saved')})
 
