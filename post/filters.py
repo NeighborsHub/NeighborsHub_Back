@@ -18,8 +18,12 @@ class ListPostFilter(django_filters.FilterSet):
                 queryset.filter(comment_post__hashtags__hashtag_title=value))
 
     def from_days_method(self, queryset, name, value):
-        time_before = timezone.now() - datetime.timedelta(days=value)
-        return queryset.filter(created_at__lte=time_before)
+        try:
+            value = int(value)
+            time_before = timezone.now() - datetime.timedelta(days=value)
+            return queryset.filter(created_at__lte=time_before)
+        except ValueError:
+            return queryset
 
     class Meta:
         model = Post
