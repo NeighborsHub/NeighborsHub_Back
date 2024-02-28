@@ -139,6 +139,7 @@ class CommentHashtag(models.Model):
 
 class Category(BaseModel):
     title = models.CharField(max_length=255, verbose_name=_('title'))
+    internal_code = models.CharField(max_length=255, verbose_name=_('Internal Code'))
     description = models.TextField(null=True, blank=True, verbose_name=_('description'))
     parent = models.ForeignKey('Category', null=True, blank=True,
                                related_name='children', on_delete=models.SET_NULL)
