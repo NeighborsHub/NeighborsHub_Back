@@ -3,6 +3,7 @@ import re
 from django.db import models
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
+from django.utils.translation import gettext as _
 
 from albums.models import Media
 from core.models import BaseModel, Hashtag
@@ -11,7 +12,7 @@ from users.models import Address
 
 class PostManager(models.Manager):
     def filter_post_distance_of_location(self, location_point: Point, distance):
-        res =  self.annotate(distance=Distance(
+        res = self.annotate(distance=Distance(
             'address__location', location_point, output_field=models.FloatField()))
         res = res if distance is None else res.filter(distance__lt=distance)
         return res
@@ -38,6 +39,7 @@ class Post(BaseModel):
     media = models.ManyToManyField(Media, null=True, blank=True, related_name='post')
     address = models.ForeignKey(Address, null=True, blank=True,
                                 related_name='post_address', on_delete=models.SET_NULL)
+    category = models.ManyToManyField('Category', verbose_name=_('category'))
 
     objects = PostManager()
 
@@ -127,3 +129,13 @@ class CommentHashtag(models.Model):
 
     def __str__(self):
         return f"CommentHashtag(post={self.comment} , title={self.hashtag.hashtag_title}, created_at={self.created_at})"
+
+
+class Category(BaseModel):
+    title = models.CharField(max_length=255, verbose_name=_('title'))
+    description = models.TextField(null=True, blank=True, verbose_name=_('description'))
+    parent = models.ForeignKey('Category', null=True, blank=True,
+                               related_name='children', on_delete=models.SET_NULL)
+
+    def __str__(self):
+        return f"Category(title={self.title} , parent_id={self.parent_id}, created_at={self.created_at})"
