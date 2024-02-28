@@ -210,7 +210,7 @@ class TestListPost(TestCase):
         self.assertEqual(12, response_json['data']['posts']['count'])
 
     def test_user_can_see_neighbors_posts(self):
-        params = {'user_latitude': -75.5673, 'user_longitude': 40.5432, 'user_distance': 100}
+        params = {'user_latitude': -75.5673, 'user_longitude': 40.5432, 'to_distance': 100}
         response = self.client.get(reverse('post_list'), data=params, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -290,7 +290,7 @@ class TestListCountLocationPost(TestCase):
         self.assertEqual(3, response_json['data']['posts']['count'])
 
     def test_location_posts_with_filter_user_location(self):
-        data = {'user_longitude': 40.5432, 'user_latitude': -75.5673, 'user_distance': 1000}
+        data = {'user_longitude': 40.5432, 'user_latitude': -75.5673, 'to_distance': 1000}
         response = self.client.get(reverse('post_location_count', ), data=data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)

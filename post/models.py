@@ -11,16 +11,17 @@ from users.models import Address
 
 
 class PostManager(models.Manager):
-    def filter_post_distance_of_location(self, location_point: Point, distance):
-        res = self.annotate(distance=Distance(
+    def filter_post_distance_of_location(self, location_point: Point, to_distance=None, from_distance=None):
+        posts = self.annotate(distance=Distance(
             'address__location', location_point, output_field=models.FloatField()))
-        res = res if distance is None else res.filter(distance__lt=distance)
-        return res
+        posts = posts.filter(distance__lte=to_distance) if to_distance else posts
+        posts = posts.filter(distance__gte=from_distance) if from_distance else posts
+        return posts
 
     def filter_post_location(self, post_location: Point):
         return self.filter(address__location=post_location)
 
-    def filter_posts_location_user_distance(self, user_location, post_location, user_distance=None):
+    def filter_posts_location_user_distance(self, user_location, post_location, to_distance=None, from_distance=None):
         posts = self.filter(address__isnull=False)
         posts = posts.filter(address__location=post_location) if post_location is not None else posts
         if user_location is not None:
@@ -28,7 +29,8 @@ class PostManager(models.Manager):
                 'address__location', user_location, output_field=models.FloatField())
             )
 
-            posts = posts.filter(distance__lt=user_distance) if user_distance else posts
+            posts = posts.filter(distance__lte=to_distance) if to_distance else posts
+            posts = posts.filter(distance__gte=from_distance) if from_distance else posts
         return posts
 
 
