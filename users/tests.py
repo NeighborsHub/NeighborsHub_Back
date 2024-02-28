@@ -707,7 +707,7 @@ class TestVerifyEmailForgetPasswordUser(TestCase):
         response = self.client.get(
             reverse('verify_email_forget_password', kwargs={"token": "SOME_TEXT_HERE"}), data={}, format='json')
         response_json = response.json()
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertIn('error', response_json['status'])
         self.assertEqual('Token expired', response_json['message'])
         self.assertEqual('token_error', response_json['code'])
