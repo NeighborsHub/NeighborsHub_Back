@@ -37,13 +37,13 @@ def custom_exception_handler(exc, context):
 
 
 class TokenIsNotValidAPIException(CustomException):
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code = status.HTTP_403_FORBIDDEN
     default_code = 'token_error'
     default_detail = _('Token is not valid')
 
 
 class TokenExpiredAPIException(CustomException):
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code = status.HTTP_403_FORBIDDEN
     default_code = 'token_error'
     default_detail = _('Token expired')
 
