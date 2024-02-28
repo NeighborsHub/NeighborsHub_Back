@@ -11,6 +11,9 @@ from django.utils.translation import gettext as _
 from NeighborsHub.exceptions import NotOwnAddressException
 from core.models import BaseModel, City, States, Hashtag
 
+def hex_uuid():
+    return uuid4().hex
+
 
 def validate_email(value: str) -> bool:
     email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
@@ -78,12 +81,14 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     verified_email_at = models.DateTimeField(blank=True, null=True)
     verified_mobile_at = models.DateTimeField(blank=True, null=True)
-    unique_id = models.CharField(default=uuid4().hex)
+    unique_id = models.CharField(default=hex_uuid)
     objects = CustomUserManager()
 
     def save(self, *args, **kwargs):
         self.username = uuid4().hex
         super().save(*args, **kwargs)
+
+
 
     def __str__(self):
         return self.username

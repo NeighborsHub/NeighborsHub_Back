@@ -1,6 +1,8 @@
 from langchain.chains import create_tagging_chain
 from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv, find_dotenv
 
+load_dotenv(find_dotenv(), override=True)
 
 class GetPostCategory:
     def __init__(self, categories: list[str], text):

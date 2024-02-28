@@ -7,6 +7,8 @@ from django.utils.translation import gettext as _
 
 from albums.models import Media
 from core.models import BaseModel, Hashtag
+from NeighborsHub.celery import app as celery_app
+from post.task import celery_get_category_post
 from users.models import Address
 
 
@@ -41,7 +43,7 @@ class Post(BaseModel):
     media = models.ManyToManyField(Media, null=True, blank=True, related_name='post')
     address = models.ForeignKey(Address, null=True, blank=True,
                                 related_name='post_address', on_delete=models.SET_NULL)
-    category = models.ManyToManyField('Category', verbose_name=_('category'))
+    category = models.ManyToManyField('Category', verbose_name=_('category'), blank=True)
 
     objects = PostManager()
 
@@ -51,12 +53,14 @@ class Post(BaseModel):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        celery_get_category_post.s(self.id,).apply_async()
 
         hashtags = [hashtag.lower() for hashtag in self.extract_hashtags()]
         self.posthashtag_set.exclude(hashtag__hashtag_title__in=hashtags).delete()
         for tag in hashtags:
             hashtag, created = Hashtag.objects.get_or_create(hashtag_title=tag)
             self.hashtags.add(hashtag)
+
 
     def __str__(self):
         return (f"Post(id={self.id}, title={self.title}, state={self.state},"
