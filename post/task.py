@@ -9,5 +9,6 @@ def celery_get_category_post(post_id: int) -> None:
     categories = [category.title for category in Category.objects.all()]
     post = Post.objects.get(id=post_id)
     category_title = GetPostCategory(categories, post.body).run()
+    post.category.clear()
     post.category.add(Category.objects.get(title=category_title))
     return
