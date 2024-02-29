@@ -136,11 +136,13 @@ class TestListHashtags(TestCase):
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_successful(self):
-        response = self.client.get(reverse('core_list_hashtags'), format='json')
+        params = {
+            "search": "hell"
+        }
+        response = self.client.get(reverse('core_list_hashtags'), data=params, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('ok', response_json['status'])
         self.assertEqual(1, len(response_json['data']['hashtags']['results']))
         self.assertEqual('hello', response_json['data']['hashtags']['results'][0]['hashtag_title'])
         self.assertEqual(10, response_json['data']['hashtags']['results'][0]['count'])
-
