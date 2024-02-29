@@ -272,7 +272,6 @@ class TestListPost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(2, response_json['data']['posts']['count'])
 
-
     def test_successful_filter_category(self):
         params = {
             'category': 'test'
@@ -564,9 +563,7 @@ class ListCategory(TestCase):
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_search_categories(self):
-        response = self.client.get(reverse('list_category'), data={'search':'test'}, format='json')
+        response = self.client.get(reverse('list_category'), data={'search': 'test'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_json = response.json()
         self.assertEqual(1, response_json['data']['categories']['count'])
-
-
