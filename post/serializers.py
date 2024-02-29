@@ -5,7 +5,7 @@ from rest_framework_gis.serializers import GeoModelSerializer, GeometryField
 
 from albums.models import Media
 from albums.serializers import MediaSerializer
-from post.models import Post, Comment, Like, LikePost
+from post.models import Post, Comment, Like, LikePost, Category
 from users.models import Address
 from users.serializers import UserSerializer, AddressSerializer, UserPublicSerializer
 
@@ -183,3 +183,9 @@ class TruncatePostSerializer(GeoModelSerializer):
         model = Post
         geo_field = "location"
         fields = ['id', 'title', 'body']
+
+
+class ListCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'title', 'internal_code', 'description']
