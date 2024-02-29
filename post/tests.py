@@ -194,7 +194,10 @@ class TestListPost(TestCase):
         post_address = baker.make(Address, location=Point(40.5432, -75.5673), )
         dummy_address = baker.make(Address, location=Point(41.5435, -79.5680), )
         medias = baker.make(Media, 5)
-        baker.make(Post, address=post_address, media=medias, _quantity=2, body="#hello_world")
+        posts = baker.make(Post, address=post_address, media=medias, _quantity=2, body="#hello_world")
+        category = baker.make(Category, title='testing', internal_code='test')
+        posts[0].category.add(category)
+        posts[1].category.add(category)
         baker.make(Post, address=dummy_address, _quantity=10)
         baker.make(Media, 2)
 
@@ -251,13 +254,28 @@ class TestListPost(TestCase):
         self.assertIn('media', response_json['data']['posts']['results'][0])
         self.assertIn('distance', response_json['data']['posts']['results'][0])
         self.assertIn('likes', response_json['data']['posts']['results'][0])
+        self.assertIn('category', response_json['data']['posts']['results'][0])
         self.assertIn('is_user_liked', response_json['data']['posts']['results'][0])
         self.assertEqual(2, response_json['data']['posts']['results'][0]['distance'])
         self.assertEqual(5, len(response_json['data']['posts']['results'][0]['media']))
+        self.assertIn('title', response_json['data']['posts']['results'][0]['category'][0])
+        self.assertIn('id', response_json['data']['posts']['results'][0]['category'][0])
+        self.assertIn('test', response_json['data']['posts']['results'][0]['category'][0]['internal_code'])
 
     def test_successful_in_bbox(self):
         params = {
             'in_bbox': '40.5432,-75.5673,41.52,-75.55'
+        }
+        response = self.client.get(reverse('post_list'), data=params, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(2, response_json['data']['posts']['count'])
+
+
+    def test_successful_filter_category(self):
+        params = {
+            'category': 'test'
         }
         response = self.client.get(reverse('post_list'), data=params, format='json')
         response_json = response.json()

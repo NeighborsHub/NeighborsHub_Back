@@ -17,6 +17,18 @@ class TruncatedTextField(serializers.CharField):
         return data
 
 
+class ListCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'title', 'internal_code', 'description']
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'title', 'internal_code', ]
+
+
 class RetrievePostSerializer(serializers.ModelSerializer):
     created_by = UserPublicSerializer(read_only=True)
     address = AddressSerializer(read_only=True)
@@ -24,6 +36,7 @@ class RetrievePostSerializer(serializers.ModelSerializer):
     body = serializers.CharField(allow_null=False)
     media = MediaSerializer(many=True, read_only=True)
     is_owner = serializers.SerializerMethodField('get_is_owner')
+    category = CategorySerializer(many=True, read_only=True)
 
     def get_is_owner(self, obj):
         user = self.context['request'].user
@@ -32,7 +45,7 @@ class RetrievePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('id', 'address', 'title', 'created_by', 'body', 'media',
-                  'created_at', 'updated_at', 'is_owner')
+                  'created_at', 'updated_at', 'is_owner', 'category')
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -49,6 +62,7 @@ class PostSerializer(serializers.ModelSerializer):
         write_only=True, required=False
     )
     media = MediaSerializer(many=True, read_only=True)
+    category = ListCategorySerializer(many=True, read_only=True)
 
     def create(self, validated_data):
         medias_data = validated_data.pop('medias') if 'medias' in validated_data else []
@@ -88,9 +102,10 @@ class MyListPostSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True)
     title = serializers.CharField(max_length=100)
     body = TruncatedTextField(max_length=100)
-    media = MediaSerializer(read_only=True, many=True,)
+    media = MediaSerializer(read_only=True, many=True, )
     likes = serializers.SerializerMethodField('get_likes_count')
     is_user_liked = serializers.SerializerMethodField('get_is_user_like')
+    category = ListCategorySerializer(many=True, read_only=True)
 
     def get_likes_count(self, obj):
         res = LikePost.objects.filter(post_id=obj.id).values('type').annotate(count=Count('type'))
@@ -103,7 +118,7 @@ class MyListPostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Post
-        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'likes', 'is_user_liked')
+        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'likes', 'is_user_liked', 'category')
 
 
 class PublicListPostSerializer(MyListPostSerializer):
@@ -111,7 +126,8 @@ class PublicListPostSerializer(MyListPostSerializer):
 
     class Meta:
         model = Post
-        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'distance', 'likes', 'is_user_liked')
+        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'distance', 'likes', 'is_user_liked',
+                  'category')
 
 
 class ListCountLocationPostsSerializer(GeoModelSerializer):
@@ -183,9 +199,3 @@ class TruncatePostSerializer(GeoModelSerializer):
         model = Post
         geo_field = "location"
         fields = ['id', 'title', 'body']
-
-
-class ListCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ['id', 'title', 'internal_code', 'description']

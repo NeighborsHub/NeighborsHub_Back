@@ -10,6 +10,7 @@ from .models import Post
 
 class ListPostFilter(django_filters.FilterSet):
     # Define the filter for the OR operation
+    category = django_filters.CharFilter(field_name='category__internal_code')
     hashtag_title = django_filters.CharFilter(method='hashtag_comment_or_post')
     from_days = django_filters.NumberFilter(method='from_days_method')
 
@@ -27,5 +28,5 @@ class ListPostFilter(django_filters.FilterSet):
 
     class Meta:
         model = Post
-        fields = ['address_id', 'hashtag_title', 'from_days']
+        fields = ['address_id', 'hashtag_title', 'from_days', 'category']
         search_fields = ['title', 'body']
