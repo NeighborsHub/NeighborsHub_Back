@@ -29,6 +29,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*', ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://noobot.ir",
+]
 # Application definition
 
 INSTALLED_APPS = [
