@@ -10,7 +10,7 @@ from rest_framework.reverse import reverse
 from NeighborsHub.test_function import test_object_attributes_existence
 from albums.models import Media
 from core.models import Hashtag
-from post.models import Post, PostHashtag, Comment, CommentHashtag, LikePost, LikeComment
+from post.models import Post, PostHashtag, Comment, CommentHashtag, LikePost, LikeComment, Category
 from users.models import Address, CustomerUser
 from users.tests import _create_user
 from rest_framework.test import APIClient
@@ -194,7 +194,10 @@ class TestListPost(TestCase):
         post_address = baker.make(Address, location=Point(40.5432, -75.5673), )
         dummy_address = baker.make(Address, location=Point(41.5435, -79.5680), )
         medias = baker.make(Media, 5)
-        baker.make(Post, address=post_address, media=medias, _quantity=2, body="#hello_world")
+        posts = baker.make(Post, address=post_address, media=medias, _quantity=2, body="#hello_world")
+        category = baker.make(Category, title='testing', internal_code='test')
+        posts[0].category.add(category)
+        posts[1].category.add(category)
         baker.make(Post, address=dummy_address, _quantity=10)
         baker.make(Media, 2)
 
@@ -251,9 +254,13 @@ class TestListPost(TestCase):
         self.assertIn('media', response_json['data']['posts']['results'][0])
         self.assertIn('distance', response_json['data']['posts']['results'][0])
         self.assertIn('likes', response_json['data']['posts']['results'][0])
+        self.assertIn('category', response_json['data']['posts']['results'][0])
         self.assertIn('is_user_liked', response_json['data']['posts']['results'][0])
         self.assertEqual(2, response_json['data']['posts']['results'][0]['distance'])
         self.assertEqual(5, len(response_json['data']['posts']['results'][0]['media']))
+        self.assertIn('title', response_json['data']['posts']['results'][0]['category'][0])
+        self.assertIn('id', response_json['data']['posts']['results'][0]['category'][0])
+        self.assertIn('test', response_json['data']['posts']['results'][0]['category'][0]['internal_code'])
 
     def test_successful_in_bbox(self):
         params = {
@@ -265,6 +272,15 @@ class TestListPost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(2, response_json['data']['posts']['count'])
 
+    def test_successful_filter_category(self):
+        params = {
+            'category': 'test'
+        }
+        response = self.client.get(reverse('post_list'), data=params, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(2, response_json['data']['posts']['count'])
 
 
 class TestListCountLocationPost(TestCase):
@@ -299,7 +315,7 @@ class TestListCountLocationPost(TestCase):
 
     def test_location_posts_in_bbox(self):
         data = {'in_bbox': '40.5432,-75.5673,41.52,-75.55'}
-        response = self.client.get(reverse('post_location_count' ), data=data, format='json')
+        response = self.client.get(reverse('post_location_count'), data=data, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
@@ -534,3 +550,20 @@ class LikeCommentTestCase(TestCase):
                                               kwargs={'comment_pk': self.comment.id}), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertIsNone(LikeComment.objects.filter(comment_id=self.comment.id, ).first())
+
+
+class ListCategory(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        baker.make(Category, _quantity=9)
+        self.category = baker.make(Category, title="testing", internal_code='test')
+
+    def test_api_exist(self):
+        response = self.client.get(reverse('list_category'), data={}, format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_search_categories(self):
+        response = self.client.get(reverse('list_category'), data={'search': 'test'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = response.json()
+        self.assertEqual(1, response_json['data']['categories']['count'])

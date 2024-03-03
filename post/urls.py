@@ -2,7 +2,7 @@ from django.urls import path
 
 from post.views import CreateUserPostAPI, ListUserPostAPI, RetrieveUpdateDeleteUserPostAPI, ListPostAPI, \
     CreateCommentAPI, RetrieveUpdateDeleteCommentAPI, ListCommentAPI, RetrievePost, LikePostAPI, LikeCommentAPI, \
-    ListCountLocationPostAPI
+    ListCountLocationPostAPI, ListCategoryAPI
 
 urlpatterns = [
     path('me/create', CreateUserPostAPI.as_view(), name='user_post_create'),
@@ -17,4 +17,6 @@ urlpatterns = [
          name='post_comment_update_delete'),
     path('<int:post_pk>/like', LikePostAPI.as_view(), name='post_like'),
     path('comment/<int:comment_pk>/like', LikeCommentAPI.as_view(), name='comment_like'),
+
+    path('category/', ListCategoryAPI.as_view(), name='list_category')
 ]

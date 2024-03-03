@@ -12,9 +12,10 @@ from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, Expressiv
 from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundException
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, CustomAuthenticationWithoutEffect
 from post.filters import ListPostFilter
-from post.models import Post, Comment, LikePost, LikeComment
+from post.models import Post, Comment, LikePost, LikeComment, Category
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
-    LikePostSerializer, LikeCommentSerializer, ListCountLocationPostsSerializer, PublicListPostSerializer
+    LikePostSerializer, LikeCommentSerializer, ListCountLocationPostsSerializer, PublicListPostSerializer, \
+    ListCategorySerializer
 from post.models import Post, Comment
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
     RetrievePostSerializer
@@ -221,3 +222,12 @@ class LikeCommentAPI(APIView):
     def delete(request, comment_pk):
         LikeComment.objects.filter(created_by=request.user, comment_id=comment_pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ListCategoryAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
+    serializer_class = ListCategorySerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ['title', 'description']
+    queryset = Category.objects.all()
+    plural_name = 'categories'

@@ -5,6 +5,7 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.utils.translation import gettext as _
 
+from NeighborsHub.utils import is_testing
 from albums.models import Media
 from core.models import BaseModel, Hashtag
 from NeighborsHub.celery import app as celery_app
@@ -53,7 +54,8 @@ class Post(BaseModel):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        celery_get_category_post.s(self.id,).apply_async()
+        if not is_testing():
+            celery_get_category_post.s(self.id,).apply_async()
 
         hashtags = [hashtag.lower() for hashtag in self.extract_hashtags()]
         self.posthashtag_set.exclude(hashtag__hashtag_title__in=hashtags).delete()

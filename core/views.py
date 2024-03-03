@@ -41,3 +41,5 @@ class ListHashtagsView(ExpressiveListModelMixin, generics.ListAPIView):
     plural_name = "hashtags"
     queryset = Hashtag.objects.all()
     serializer_class = HashtagSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = ['hashtag_title', ]
