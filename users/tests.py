@@ -1043,7 +1043,7 @@ class TestUserDetail(TestCase):
     def test_exist_api(self):
         response = self.client.get(reverse('user_detail',
                                            kwargs={'user_pk': self.user.id}), data={}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_unfollow_successful(self):
         address = baker.make(Address, created_by=self.user)
@@ -1065,6 +1065,15 @@ class TestUserDetail(TestCase):
         self.assertEqual(3, response_json['data']['user']['following_count'])
         self.assertEqual(2, response_json['data']['user']['posts_count'])
 
+    def test_user_public_information(self):
+        response = self.client.get(reverse('user_detail',
+                                           kwargs={'user_pk': self.user.id}), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = response.json()
+        self.assertEqual(f"{USER_VALID_DATA['email'][:2]}***{USER_VALID_DATA['email'][-5:]}",
+                         response_json['data']['user']['email'])
+        self.assertEqual(f"{USER_VALID_DATA['mobile'][:3]}***{USER_VALID_DATA['mobile'][-2:]}",
+                         response_json['data']['user']['mobile'])
 
 class TestUserSetPassword(TestCase):
     def setUp(self) -> None:

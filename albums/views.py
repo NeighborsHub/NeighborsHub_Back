@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import generics
 
 from NeighborsHub.custom_view_mixin import ExpressiveListModelMixin, ExpressiveCreateModelMixin
-from NeighborsHub.permission import CustomAuthentication
+from NeighborsHub.permission import CustomAuthentication, CustomAuthenticationWithoutEffect
 from albums.models import Media, UserAvatar
 from albums.serializers import MyListMediaSerializer, UserListMediaSerializer, UserAvatarSerializer
 
@@ -17,6 +17,7 @@ class MyListGalleryAPI(ExpressiveListModelMixin, generics.ListAPIView):
 
 
 class UserListGalleryAPI(ExpressiveListModelMixin, generics.ListAPIView):
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
     serializer_class = UserListMediaSerializer
     plural_name = 'medias'
 

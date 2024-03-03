@@ -198,12 +198,22 @@ class VerifyOtpForgetPasswordSerializer(VerifyOtpMobileSerializer, VerifyEmailFo
 
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.CharField(read_only=True)
-    mobile = serializers.CharField(read_only=True)
+    email = serializers.SerializerMethodField('get_user_public_email')
+    mobile = serializers.SerializerMethodField('get_user_public_mobile')
     avatar = serializers.SerializerMethodField('get_last_user_avatar')
     follower_count = serializers.SerializerMethodField('get_user_follower_count')
     following_count = serializers.SerializerMethodField('get_user_following_count')
     posts_count = serializers.SerializerMethodField('get_user_posts_count')
+
+    def get_user_public_email(self, obj):
+        if obj.email is not None and self.context['request'].user is None:
+            return f"{obj.email[:2]}***{obj.email[-5:]}"
+        return obj.email
+
+    def get_user_public_mobile(self, obj):
+        if obj.mobile is not None and self.context['request'].user is None:
+            return f"{obj.mobile[:3]}***{obj.mobile[-2:]}"
+        return obj.mobile
 
     def get_user_follower_count(self, obj):
         return obj.following.count()
@@ -231,12 +241,14 @@ class UserPublicSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField('get_last_user_avatar')
 
     def get_user_public_email(self, obj):
-        if obj.email is not None:
+        if obj.email is not None and self.context['request'].user is None:
             return f"{obj.email[:2]}***{obj.email[-5:]}"
+        return obj.email
 
     def get_user_public_mobile(self, obj):
-        if obj.mobile is not None:
+        if obj.mobile is not None and self.context['request'].user is None:
             return f"{obj.mobile[:3]}***{obj.mobile[-2:]}"
+        return obj.mobile
 
     def get_last_user_avatar(self, obj):
         qs = obj.avatar.last()

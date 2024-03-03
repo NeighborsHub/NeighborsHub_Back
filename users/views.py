@@ -12,7 +12,8 @@ from django.utils.translation import gettext as _
 
 from NeighborsHub.exceptions import TokenIsNotValidAPIException, UserDoesNotExistAPIException, NotValidOTPAPIException, \
     IncorrectUsernamePasswordException, ObjectNotFoundException
-from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, IsVerifiedUserPermission
+from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, IsVerifiedUserPermission, \
+    CustomAuthenticationWithoutEffect
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from NeighborsHub.utils import create_random_chars
 from albums.models import UserAvatar
@@ -593,8 +594,7 @@ class GoogleSetpasswordAPI(APIView):
 
 
 class UserDetailAPI(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
-    authentication_classes = (CustomAuthentication,)
-    permission_classes = (IsVerifiedUserPermission,)
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
     serializer_class = UserSerializer
     singular_name = 'user'
 

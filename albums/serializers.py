@@ -34,7 +34,7 @@ class UserListMediaSerializer(MyListMediaSerializer):
 
     def get_created_by_info(self, obj):
         from users.serializers import UserPublicSerializer
-        return UserPublicSerializer(instance=obj.created_by, many=False).data
+        return UserPublicSerializer(instance=obj.created_by, many=False, context=self.context).data
 
     class Meta:
         model = Media
