@@ -11,6 +11,7 @@ from django.utils.translation import gettext as _
 from NeighborsHub.exceptions import NotOwnAddressException
 from core.models import BaseModel, City, States, Hashtag
 
+
 def hex_uuid():
     return uuid4().hex
 
@@ -87,8 +88,6 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     def save(self, *args, **kwargs):
         self.username = uuid4().hex
         super().save(*args, **kwargs)
-
-
 
     def __str__(self):
         return self.username

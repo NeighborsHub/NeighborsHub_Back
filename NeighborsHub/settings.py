@@ -29,6 +29,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*', ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://noobot.ir",
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -65,7 +68,8 @@ MIDDLEWARE = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
-    "https://neighborshub.ca"
+    "https://neighborshub.ca",
+    "https://noobot.ir"
 ]
 ROOT_URLCONF = 'NeighborsHub.urls'
 

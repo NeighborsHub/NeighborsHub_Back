@@ -94,7 +94,7 @@ class PostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('id', 'address', 'title', 'created_by', 'body', 'updated_by', 'body', 'media', 'medias',
-                  'created_at', 'address_id')
+                  'created_at', 'address_id', 'category')
 
 
 class MyListPostSerializer(serializers.ModelSerializer):
