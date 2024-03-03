@@ -116,6 +116,24 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
         return posts
 
 
+class ListPublicUserPostAPI(ListPostAPI):
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
+    serializer_class = PublicListPostSerializer
+    filter_backends = [InBBoxFilter, DjangoFilterBackend, SearchFilter]
+    filterset_class = ListPostFilter
+    plural_name = 'posts'
+    bbox_filter_field = 'address__location'
+
+    def get_queryset(self):
+        posts = Post.objects.filter_posts_location_user_distance(
+            user_location=self.get_user_location_point(),
+            post_location=self.get_post_location_point(),
+            from_distance=self.request.query_params.get('from_distance', None),
+            to_distance=self.request.query_params.get('to_distance', None)
+        ).filter(created_by_id=self.kwargs['user_pk'])
+        return posts
+
+
 class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     authentication_classes = (CustomAuthenticationWithoutEffect,)
     serializer_class = ListCountLocationPostsSerializer

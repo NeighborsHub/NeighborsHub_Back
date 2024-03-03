@@ -567,3 +567,26 @@ class ListCategory(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_json = response.json()
         self.assertEqual(1, response_json['data']['categories']['count'])
+
+
+class ListPublicUserPost(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        post_address = baker.make(Address, location=Point(40.5432, -75.5673), )
+        medias = baker.make(Media, 5)
+        posts = baker.make(Post, address=post_address, media=medias, _quantity=1,
+                           body="#hello_world", created_by=self.user, updated_by=self.user)
+
+        category = baker.make(Category, title='testing', internal_code='test')
+        posts[0].category.add(category)
+        baker.make(Post, _quantity=10, body="#bye_world", )
+
+    def test_user_can_paginated_post(self):
+        response = self.client.get(reverse('public_user_post_list', kwargs={'user_pk': self.user.id}),
+                                   data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_json['status'], 'ok')
+        self.assertEqual(1, response_json['data']['posts']['count'])
+
