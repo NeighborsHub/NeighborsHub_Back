@@ -414,7 +414,7 @@ class ListCreateUserAddressAPI(ExpressiveCreateModelMixin, ExpressiveListModelMi
         return Address.objects.filter(user=self.request.user)
 
 
-class RetrieveUpdateUserAPI(ExpressiveRetrieveModelMixin, generics.RetrieveUpdateAPIView):
+class RetrieveUpdateUserAPI(ExpressiveRetrieveModelMixin, ExpressiveUpdateModelMixin, generics.RetrieveUpdateAPIView):
     authentication_classes = (CustomAuthentication,)
     serializer_class = UserSerializer
     singular_name = 'user'
