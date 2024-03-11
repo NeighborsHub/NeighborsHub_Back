@@ -90,6 +90,8 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     filterset_class = ListPostFilter
     plural_name = 'posts'
     bbox_filter_field = 'address__location'
+    search_fields = ['title', 'body']
+
 
     def get_user_location_point(self):
         if (self.request.query_params.get('user_latitude') is not None and
@@ -123,6 +125,8 @@ class ListPublicUserPostAPI(ListPostAPI):
     filterset_class = ListPostFilter
     plural_name = 'posts'
     bbox_filter_field = 'address__location'
+    search_fields = ['title', 'body']
+
 
     def get_queryset(self):
         posts = Post.objects.filter_posts_location_user_distance(
@@ -141,6 +145,8 @@ class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     filterset_class = ListPostFilter
     plural_name = 'posts'
     bbox_filter_field = 'address__location'
+    search_fields = ['title', 'body']
+
 
     def get_user_near_post(self):
         if (self.request.query_params.get('user_latitude') is not None and
