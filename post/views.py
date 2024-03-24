@@ -83,6 +83,14 @@ class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
             raise ObjectNotFoundException
         return obj
 
+    def seen_post(self):
+        return UserSeenPost.objects.update_or_create(user=self.request.user, post_id=self.kwargs['post_pk'])
+
+    def get(self, request, *args, **kwargs):
+        response = self.retrieve(request, *args, **kwargs)
+        self.seen_post()
+        return response
+
 
 class ListPostAPI(generics.ListAPIView):
     authentication_classes = (CustomAuthenticationWithoutEffect,)
@@ -139,7 +147,7 @@ class ListPostAPI(generics.ListAPIView):
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            self.seen_posts(page) # set seen for posts
+            self.seen_posts(page)  # set seen for posts
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)

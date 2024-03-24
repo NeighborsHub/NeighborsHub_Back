@@ -635,3 +635,27 @@ class TestSetSeenPosts(TestCase):
         response_json = response.json()
         for post in response_json['data']['posts']['results']:
             self.assertEqual(False, post['is_seen'])
+
+
+class TestSetSeenPostDetail(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = _create_user()
+        self.dummy_user = baker.make(CustomerUser)
+        user2 = baker.make(CustomerUser)
+        address = baker.make(Address, user=user2)
+        self.post = baker.make(Post, created_by=user2, address=address)
+
+    def test_seen_posts_successful(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('post_retrieve', kwargs={'post_pk': self.post.id}))
+        response_json = response.json()
+        self.assertIn('is_seen', response_json['data']['post'])
+        self.assertEqual({}, response_json['data']['post']['is_seen'])
+
+        response = self.client.get(reverse('post_retrieve', kwargs={'post_pk': self.post.id}))
+        response_json = response.json()
+        self.assertIn('is_seen', response_json['data']['post'])
+        self.assertIn('first_seen', response_json['data']['post']['is_seen'])
+        self.assertIn('last_seen', response_json['data']['post']['is_seen'])
+

@@ -5,7 +5,7 @@ from rest_framework_gis.serializers import GeoModelSerializer, GeometryField
 
 from albums.models import Media
 from albums.serializers import MediaSerializer
-from post.models import Post, Comment, Like, LikePost, Category
+from post.models import Post, Comment, Like, LikePost, Category, UserSeenPost
 from users.models import Address
 from users.serializers import UserSerializer, AddressSerializer, UserPublicSerializer
 
@@ -37,15 +37,21 @@ class RetrievePostSerializer(serializers.ModelSerializer):
     media = MediaSerializer(many=True, read_only=True)
     is_owner = serializers.SerializerMethodField('get_is_owner')
     category = CategorySerializer(many=True, read_only=True)
+    is_seen = serializers.SerializerMethodField('set_is_seen')
 
     def get_is_owner(self, obj):
         user = self.context['request'].user
         return obj.created_by == user
 
+    def set_is_seen(self, obj):
+        user = self.context['request'].user
+        seen_obj = UserSeenPost.objects.filter(user=user, post=obj).first()
+        return UserSeenPostSerializer(instance=seen_obj, many=False).data
+
     class Meta:
         model = Post
         fields = ('id', 'address', 'title', 'created_by', 'body', 'media',
-                  'created_at', 'updated_at', 'is_owner', 'category')
+                  'created_at', 'updated_at', 'is_owner', 'category', 'is_seen')
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -200,3 +206,10 @@ class TruncatePostSerializer(GeoModelSerializer):
         model = Post
         geo_field = "location"
         fields = ['id', 'title', 'body']
+
+
+class UserSeenPostSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserSeenPost
+        fields = ('first_seen', 'last_seen')
