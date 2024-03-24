@@ -160,7 +160,7 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10
 }
 
-GDAL_LIBRARY_PATH = '/lib/libgdal.so'
+# GDAL_LIBRARY_PATH = '/lib/libogdi.so'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

@@ -148,3 +148,14 @@ class Category(BaseModel):
 
     def __str__(self):
         return f"Category(title={self.title} , parent_id={self.parent_id}, created_at={self.created_at})"
+
+
+class UserSeenPost(models.Model):
+    user = models.ForeignKey('users.CustomerUser', on_delete=models.CASCADE, related_name='seen_posts',
+                             verbose_name=_('user'))
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='user_seen_posts')
+    first_seen = models.DateTimeField(auto_now_add=True)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'post')

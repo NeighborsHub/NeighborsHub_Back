@@ -123,11 +123,12 @@ class MyListPostSerializer(serializers.ModelSerializer):
 
 class PublicListPostSerializer(MyListPostSerializer):
     distance = serializers.IntegerField(read_only=True)
+    is_seen = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Post
         fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'distance', 'likes', 'is_user_liked',
-                  'category')
+                  'category', 'is_seen')
 
 
 class ListCountLocationPostsSerializer(GeoModelSerializer):

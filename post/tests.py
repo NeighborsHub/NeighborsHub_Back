@@ -10,7 +10,7 @@ from rest_framework.reverse import reverse
 from NeighborsHub.test_function import test_object_attributes_existence
 from albums.models import Media
 from core.models import Hashtag
-from post.models import Post, PostHashtag, Comment, CommentHashtag, LikePost, LikeComment, Category
+from post.models import Post, PostHashtag, Comment, CommentHashtag, LikePost, LikeComment, Category, UserSeenPost
 from users.models import Address, CustomerUser
 from users.tests import _create_user
 from rest_framework.test import APIClient
@@ -590,3 +590,48 @@ class ListPublicUserPost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(1, response_json['data']['posts']['count'])
 
+
+class TsetUserSeenPostModel(TestCase):
+    @staticmethod
+    def test_property_type_model_exists():
+        UserSeenPost()
+
+    def test_property_type_model_has_all_required_attributes(self):
+        attributes = [
+            'user_id', 'post_id', 'first_seen', 'last_seen',
+        ]
+        obj = UserSeenPost()
+        test_object_attributes_existence(self, obj, attributes)
+
+    def test_create_obj(self):
+        created = baker.make(UserSeenPost)
+        test_obj = UserSeenPost.objects.filter(id=created.id).first()
+        self.assertIsNotNone(test_obj)
+
+
+class TestSetSeenPosts(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = _create_user()
+        self.dummy_user = baker.make(CustomerUser)
+        user2 = baker.make(CustomerUser)
+        address = baker.make(Address, user=user2)
+        posts = baker.make(Post, _quantity=12, created_by=user2, address=address)
+
+    def test_seen_posts_successful(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('post_list'))
+        response_json = response.json()
+        for post in response_json['data']['posts']['results']:
+            self.assertEqual(False, post['is_seen'])
+
+        response = self.client.get(reverse('post_list'))
+        response_json = response.json()
+        for post in response_json['data']['posts']['results']:
+            self.assertEqual(True, post['is_seen'])
+
+        self.client.force_authenticate(self.dummy_user)
+        response = self.client.get(reverse('post_list'))
+        response_json = response.json()
+        for post in response_json['data']['posts']['results']:
+            self.assertEqual(False, post['is_seen'])

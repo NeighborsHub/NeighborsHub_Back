@@ -11,8 +11,9 @@ from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, Expressiv
     ExpressiveUpdateModelMixin, ExpressiveRetrieveModelMixin
 from NeighborsHub.exceptions import NotOwnAddressException, ObjectNotFoundException
 from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication, CustomAuthenticationWithoutEffect
+from django.db import models
 from post.filters import ListPostFilter
-from post.models import Post, Comment, LikePost, LikeComment, Category
+from post.models import Post, Comment, LikePost, LikeComment, Category, UserSeenPost
 from post.serializers import PostSerializer, MyListPostSerializer, CommentSerializer, ListCommentSerializer, \
     LikePostSerializer, LikeCommentSerializer, ListCountLocationPostsSerializer, PublicListPostSerializer, \
     ListCategorySerializer
@@ -83,7 +84,7 @@ class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
         return obj
 
 
-class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
+class ListPostAPI(generics.ListAPIView):
     authentication_classes = (CustomAuthenticationWithoutEffect,)
     serializer_class = PublicListPostSerializer
     filter_backends = [InBBoxFilter, DjangoFilterBackend, SearchFilter]
@@ -91,7 +92,6 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     plural_name = 'posts'
     bbox_filter_field = 'address__location'
     search_fields = ['title', 'body']
-
 
     def get_user_location_point(self):
         if (self.request.query_params.get('user_latitude') is not None and
@@ -107,6 +107,20 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
                          float(self.request.query_params.get('post_latitude')),
                          srid=4326)
 
+    def seen_posts(self, page_posts):
+        for post in page_posts:
+            UserSeenPost.objects.update_or_create(user=self.request.user, post=post)
+        return
+
+    def set_is_seen(self, post):
+        seen_posts = UserSeenPost.objects.filter(user=self.request.user)
+        posts = post.annotate(is_seen=models.Case(
+            models.When(id__in=seen_posts, then=models.Value(True)),
+            default=models.Value(False),
+            output_field=models.BooleanField(),
+        ))
+        return posts
+
     def get_queryset(self):
         posts = Post.objects.filter_posts_location_user_distance(
             user_location=self.get_user_location_point(),
@@ -114,8 +128,26 @@ class ListPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
             from_distance=self.request.query_params.get('from_distance', None),
             to_distance=self.request.query_params.get('to_distance', None)
         )
-        posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
+        if self.request.user is not None:
+            posts = posts.exclude(created_by=self.request.user)
+            posts = self.set_is_seen(posts)
         return posts
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            self.seen_posts(page) # set seen for posts
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def get(self, request, *args, **kwargs):
+        response = self.list(request, *args, **kwargs)
+        response.data = {'status': 'ok', 'data': {self.plural_name: response.data}}
+        return response
 
 
 class ListPublicUserPostAPI(ListPostAPI):
@@ -126,7 +158,6 @@ class ListPublicUserPostAPI(ListPostAPI):
     plural_name = 'posts'
     bbox_filter_field = 'address__location'
     search_fields = ['title', 'body']
-
 
     def get_queryset(self):
         posts = Post.objects.filter_posts_location_user_distance(
@@ -146,7 +177,6 @@ class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
     plural_name = 'posts'
     bbox_filter_field = 'address__location'
     search_fields = ['title', 'body']
-
 
     def get_user_near_post(self):
         if (self.request.query_params.get('user_latitude') is not None and
