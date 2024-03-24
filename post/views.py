@@ -84,7 +84,8 @@ class RetrievePost(ExpressiveRetrieveModelMixin, generics.RetrieveAPIView):
         return obj
 
     def seen_post(self):
-        return UserSeenPost.objects.update_or_create(user=self.request.user, post_id=self.kwargs['post_pk'])
+        if self.request.user is not None:
+            return UserSeenPost.objects.update_or_create(user=self.request.user, post_id=self.kwargs['post_pk'])
 
     def get(self, request, *args, **kwargs):
         response = self.retrieve(request, *args, **kwargs)
@@ -116,9 +117,9 @@ class ListPostAPI(generics.ListAPIView):
                          srid=4326)
 
     def seen_posts(self, page_posts):
-        for post in page_posts:
-            UserSeenPost.objects.update_or_create(user=self.request.user, post=post)
-        return
+        if self.request.user is not None:
+            for post in page_posts:
+                UserSeenPost.objects.update_or_create(user=self.request.user, post=post)
 
     def set_is_seen(self, post):
         seen_posts = UserSeenPost.objects.filter(user=self.request.user)
@@ -199,9 +200,20 @@ class ListCountLocationPostAPI(ExpressiveListModelMixin, generics.ListAPIView):
             )
         return Post.objects.all()
 
+    def set_is_seen(self, post):
+        seen_posts = UserSeenPost.objects.filter(user=self.request.user)
+        posts = post.annotate(is_seen=models.Case(
+            models.When(id__in=seen_posts, then=models.Value(True)),
+            default=models.Value(False),
+            output_field=models.BooleanField(),
+        ))
+        return posts
+
     def get_queryset(self):
         posts = self.get_user_near_post()
-        posts = posts.exclude(created_by=self.request.user) if self.request.user is not None else posts
+        if self.request.user is not None:
+            posts = posts.exclude(created_by=self.request.user)
+        posts = self.set_is_seen(posts)
         posts = posts.values('address__location').annotate(posts_count=Count('address__location'))
         return posts
 

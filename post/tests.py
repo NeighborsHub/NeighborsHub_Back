@@ -191,6 +191,7 @@ class TestListPost(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.user = _create_user()
+        self.dummy_user = baker.make(CustomerUser)
         post_address = baker.make(Address, location=Point(40.5432, -75.5673), )
         dummy_address = baker.make(Address, location=Point(41.5435, -79.5680), )
         medias = baker.make(Media, 5)
@@ -282,6 +283,35 @@ class TestListPost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(2, response_json['data']['posts']['count'])
 
+    def test_seen_posts_successful(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('post_list'))
+        response_json = response.json()
+        for post in response_json['data']['posts']['results']:
+            self.assertEqual(False, post['is_seen'])
+
+        response = self.client.get(reverse('post_list'))
+        response_json = response.json()
+        for post in response_json['data']['posts']['results']:
+            self.assertEqual(True, post['is_seen'])
+
+        self.client.force_authenticate(self.dummy_user)
+        response = self.client.get(reverse('post_list'))
+        response_json = response.json()
+        for post in response_json['data']['posts']['results']:
+            self.assertEqual(False, post['is_seen'])
+
+    def test_is_seen_filter_work(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('post_list'))
+        response_json = response.json()
+        self.assertEqual(12, response_json['data']['posts']['count'])
+
+        response = self.client.get(reverse('post_list'), data={'is_seen': False})
+        response_json = response.json()
+        self.assertEqual(2, response_json['data']['posts']['count'])
+
+
 
 class TestListCountLocationPost(TestCase):
     def setUp(self) -> None:
@@ -299,7 +329,7 @@ class TestListCountLocationPost(TestCase):
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_paginated_posts_location(self):
-        response = self.client.get(reverse('post_location_count', ), data={}, format='json')
+        response = self.client.get(reverse('post_location_count',), data={}, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
@@ -415,6 +445,7 @@ class TestRetrievePost(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.user = _create_user()
+        self.other_user = baker.make(CustomerUser)
         self.post = baker.make(Post, created_by=self.user)
 
     def test_api_exists(self):
@@ -426,10 +457,26 @@ class TestRetrievePost(TestCase):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('post_retrieve',
                                            kwargs={'post_pk': self.post.id}), data={}, format='json')
-
         response_json = response.json()
         self.assertEqual('ok', response_json['status'])
         self.assertTrue(response_json['data']['post']['is_owner'])
+
+    def test_seen_posts_successful(self):
+        self.client.force_authenticate(self.other_user)
+        response = self.client.get(reverse('post_retrieve', kwargs={'post_pk': self.post.id}))
+        response_json = response.json()
+        self.assertIn('is_seen', response_json['data']['post'])
+        self.assertEqual({}, response_json['data']['post']['is_seen'])
+
+        response = self.client.get(reverse('post_retrieve', kwargs={'post_pk': self.post.id}))
+        response_json = response.json()
+        self.assertIn('is_seen', response_json['data']['post'])
+        self.assertIn('first_seen', response_json['data']['post']['is_seen'])
+        self.assertIn('last_seen', response_json['data']['post']['is_seen'])
+
+
+
+
 
 
 class TestUpdateRetrieveDeleteComment(TestCase):
@@ -607,65 +654,4 @@ class TsetUserSeenPostModel(TestCase):
         created = baker.make(UserSeenPost)
         test_obj = UserSeenPost.objects.filter(id=created.id).first()
         self.assertIsNotNone(test_obj)
-
-
-class TestSetSeenPosts(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.user = _create_user()
-        self.dummy_user = baker.make(CustomerUser)
-        user2 = baker.make(CustomerUser)
-        address = baker.make(Address, user=user2)
-        posts = baker.make(Post, _quantity=12, created_by=user2, address=address)
-
-    def test_seen_posts_successful(self):
-        self.client.force_authenticate(self.user)
-        response = self.client.get(reverse('post_list'))
-        response_json = response.json()
-        for post in response_json['data']['posts']['results']:
-            self.assertEqual(False, post['is_seen'])
-
-        response = self.client.get(reverse('post_list'))
-        response_json = response.json()
-        for post in response_json['data']['posts']['results']:
-            self.assertEqual(True, post['is_seen'])
-
-        self.client.force_authenticate(self.dummy_user)
-        response = self.client.get(reverse('post_list'))
-        response_json = response.json()
-        for post in response_json['data']['posts']['results']:
-            self.assertEqual(False, post['is_seen'])
-
-    def test_is_seen_filter_work(self):
-        self.client.force_authenticate(self.user)
-        response = self.client.get(reverse('post_list'))
-        response_json = response.json()
-        self.assertEqual(12, response_json['data']['posts']['count'])
-
-        response = self.client.get(reverse('post_list'), data={'is_seen': False})
-        response_json = response.json()
-        self.assertEqual(2, response_json['data']['posts']['count'])
-
-
-class TestSetSeenPostDetail(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.user = _create_user()
-        self.dummy_user = baker.make(CustomerUser)
-        user2 = baker.make(CustomerUser)
-        address = baker.make(Address, user=user2)
-        self.post = baker.make(Post, created_by=user2, address=address)
-
-    def test_seen_posts_successful(self):
-        self.client.force_authenticate(self.user)
-        response = self.client.get(reverse('post_retrieve', kwargs={'post_pk': self.post.id}))
-        response_json = response.json()
-        self.assertIn('is_seen', response_json['data']['post'])
-        self.assertEqual({}, response_json['data']['post']['is_seen'])
-
-        response = self.client.get(reverse('post_retrieve', kwargs={'post_pk': self.post.id}))
-        response_json = response.json()
-        self.assertIn('is_seen', response_json['data']['post'])
-        self.assertIn('first_seen', response_json['data']['post']['is_seen'])
-        self.assertIn('last_seen', response_json['data']['post']['is_seen'])
 

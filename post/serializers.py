@@ -46,7 +46,7 @@ class RetrievePostSerializer(serializers.ModelSerializer):
     def set_is_seen(self, obj):
         user = self.context['request'].user
         seen_obj = UserSeenPost.objects.filter(user=user, post=obj).first()
-        return UserSeenPostSerializer(instance=seen_obj, many=False).data
+        return UserSeenPostSerializer(instance=seen_obj, many=False).data if obj.created_by != user else None
 
     class Meta:
         model = Post
