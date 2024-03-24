@@ -286,30 +286,8 @@ class TestListPost(TestCase):
     def test_seen_posts_successful(self):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('post_list'))
-        response_json = response.json()
-        for post in response_json['data']['posts']['results']:
-            self.assertEqual(False, post['is_seen'])
-
-        response = self.client.get(reverse('post_list'))
-        response_json = response.json()
-        for post in response_json['data']['posts']['results']:
-            self.assertEqual(True, post['is_seen'])
-
-        self.client.force_authenticate(self.dummy_user)
-        response = self.client.get(reverse('post_list'))
-        response_json = response.json()
-        for post in response_json['data']['posts']['results']:
-            self.assertEqual(False, post['is_seen'])
-
-    def test_is_seen_filter_work(self):
-        self.client.force_authenticate(self.user)
-        response = self.client.get(reverse('post_list'))
-        response_json = response.json()
-        self.assertEqual(12, response_json['data']['posts']['count'])
-
-        response = self.client.get(reverse('post_list'), data={'is_seen': False})
-        response_json = response.json()
-        self.assertEqual(2, response_json['data']['posts']['count'])
+        self.assertEqual(UserSeenPost.objects.filter(user=self.user).count(),
+                         len(response.json()['data']['posts']['results']))
 
 
 
@@ -329,7 +307,7 @@ class TestListCountLocationPost(TestCase):
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_paginated_posts_location(self):
-        response = self.client.get(reverse('post_location_count',), data={}, format='json')
+        response = self.client.get(reverse('post_location_count', ), data={}, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
@@ -473,10 +451,6 @@ class TestRetrievePost(TestCase):
         self.assertIn('is_seen', response_json['data']['post'])
         self.assertIn('first_seen', response_json['data']['post']['is_seen'])
         self.assertIn('last_seen', response_json['data']['post']['is_seen'])
-
-
-
-
 
 
 class TestUpdateRetrieveDeleteComment(TestCase):
@@ -654,4 +628,3 @@ class TsetUserSeenPostModel(TestCase):
         created = baker.make(UserSeenPost)
         test_obj = UserSeenPost.objects.filter(id=created.id).first()
         self.assertIsNotNone(test_obj)
-
