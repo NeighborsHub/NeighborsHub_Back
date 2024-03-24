@@ -636,6 +636,16 @@ class TestSetSeenPosts(TestCase):
         for post in response_json['data']['posts']['results']:
             self.assertEqual(False, post['is_seen'])
 
+    def test_is_seen_filter_work(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('post_list'))
+        response_json = response.json()
+        self.assertEqual(12, response_json['data']['posts']['count'])
+
+        response = self.client.get(reverse('post_list'), data={'is_seen': False})
+        response_json = response.json()
+        self.assertEqual(2, response_json['data']['posts']['count'])
+
 
 class TestSetSeenPostDetail(TestCase):
     def setUp(self):
