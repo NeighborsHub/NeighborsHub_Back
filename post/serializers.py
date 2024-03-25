@@ -110,7 +110,7 @@ class MyListPostSerializer(serializers.ModelSerializer):
     body = TruncatedTextField(max_length=100)
     media = MediaSerializer(read_only=True, many=True, )
     likes = serializers.SerializerMethodField('get_likes_count')
-    is_user_liked = serializers.SerializerMethodField('get_is_user_like')
+    user_liked = serializers.SerializerMethodField('get_is_user_like')
     category = ListCategorySerializer(many=True, read_only=True)
 
     def get_likes_count(self, obj):
@@ -119,12 +119,12 @@ class MyListPostSerializer(serializers.ModelSerializer):
         return res
 
     def get_is_user_like(self, obj):
-        res = LikePost.objects.filter(post_id=obj.id, created_by=self.context['request'].user).exists()
-        return res
+        res = LikePost.objects.filter(post_id=obj.id, created_by=self.context['request'].user).first()
+        return res.type if res else None
 
     class Meta:
         model = Post
-        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'likes', 'is_user_liked', 'category')
+        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'likes', 'user_liked', 'category')
 
 
 class PublicListPostSerializer(MyListPostSerializer):
@@ -133,7 +133,7 @@ class PublicListPostSerializer(MyListPostSerializer):
 
     class Meta:
         model = Post
-        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'distance', 'likes', 'is_user_liked',
+        fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'distance', 'likes', 'user_liked',
                   'category', 'is_seen')
 
 

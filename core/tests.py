@@ -60,7 +60,7 @@ class TestCityModel(TestCase):
 class TestListCountry(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
-        baker.make(Country, _quantity=10)
+        baker.make(Country, _quantity=5)
 
     def test_exist_api(self):
         response = self.client.get(reverse('core_list_country'), format='json')
@@ -77,7 +77,7 @@ class TestListState(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         country = baker.make(Country)
-        baker.make(State, _quantity=10)
+        baker.make(State, _quantity=5)
         self.state = baker.make(State, country=country)
 
     def test_exist_api(self):
@@ -101,7 +101,7 @@ class TestListCity(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         country = baker.make(Country)
-        baker.make(City, _quantity=10)
+        baker.make(City, _quantity=5)
         self.state = baker.make(State, country=country)
         self.city = baker.make(City, state=self.state)
 

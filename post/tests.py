@@ -114,17 +114,17 @@ class TestMyListPost(TestCase):
         self.assertEqual(response_json['status'], 'ok')
 
     def test_user_can_see_own_post(self):
-        dummy_user = baker.make(CustomerUser)
-        baker.make(Post, created_by=dummy_user, _quantity=10)
+        # dummy_user = baker.make(CustomerUser)
+        # baker.make(Post, created_by=dummy_user, _quantity=10)
         post = baker.make(Post, created_by=self.user, _quantity=1)
-        baker.make(LikePost, post=post[0], created_by=self.user, _quantity=10)
+        baker.make(LikePost, post=post[0], created_by=self.user,type='like')
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('user_post_list'), data={}, format='json')
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response_json['status'], 'ok')
         self.assertEqual(1, response_json['data']['posts']['count'])
-        self.assertTrue(response_json['data']['posts']['results'][0]['is_user_liked'])
+        self.assertEqual('like', response_json['data']['posts']['results'][0]['user_liked'])
 
 
 class TestUpdateDeleteRetrievePost(TestCase):
@@ -256,7 +256,7 @@ class TestListPost(TestCase):
         self.assertIn('distance', response_json['data']['posts']['results'][0])
         self.assertIn('likes', response_json['data']['posts']['results'][0])
         self.assertIn('category', response_json['data']['posts']['results'][0])
-        self.assertIn('is_user_liked', response_json['data']['posts']['results'][0])
+        self.assertIn('user_liked', response_json['data']['posts']['results'][0])
         self.assertEqual(2, response_json['data']['posts']['results'][0]['distance'])
         self.assertEqual(5, len(response_json['data']['posts']['results'][0]['media']))
         self.assertIn('title', response_json['data']['posts']['results'][0]['category'][0])
