@@ -1,7 +1,7 @@
 from django.contrib.gis.db import models
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from django.db.models.expressions import RawSQL
+from django.utils.translation import gettext as _
 
 
 # Create your models here.
@@ -84,3 +84,15 @@ class City(models.Model):
 
     def __str__(self):
         return f"{self.name}, {self.state}"
+
+
+class Feedback(models.Model):
+    name = models.CharField(max_length=200, null=True, blank=True, verbose_name=_('Name'))
+    email = models.EmailField(null=True, blank=True, verbose_name=_('Email'))
+    message = models.TextField(null=True, blank=True, verbose_name=_('Message'))
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    state = models.ForeignKey(State, on_delete=models.PROTECT, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name}, {self.email}"

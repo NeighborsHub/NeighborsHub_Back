@@ -5,9 +5,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 from rest_framework.filters import SearchFilter
 
-from NeighborsHub.custom_view_mixin import ExpressiveListModelMixin
+from NeighborsHub.custom_view_mixin import ExpressiveListModelMixin, ExpressiveCreateModelMixin
 from core.models import Country, State, City, Hashtag
-from core.serializers import CountrySerializer, StateSerializer, CitySerializer, HashtagSerializer
+from core.serializers import CountrySerializer, StateSerializer, CitySerializer, HashtagSerializer, FeedbackSerializer
 
 
 class ListCountryView(ExpressiveListModelMixin, generics.ListAPIView):
@@ -43,3 +43,8 @@ class ListHashtagsView(ExpressiveListModelMixin, generics.ListAPIView):
     serializer_class = HashtagSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     search_fields = ['hashtag_title', ]
+
+
+class CreateFeedbackView(ExpressiveCreateModelMixin, generics.CreateAPIView):
+    singular_name = "feedback"
+    serializer_class = FeedbackSerializer

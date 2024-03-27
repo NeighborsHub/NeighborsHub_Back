@@ -5,7 +5,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
 from NeighborsHub.test_function import test_object_attributes_existence
-from core.models import Country, State, City, Hashtag
+from core.models import Country, State, City, Hashtag, Feedback
 from post.models import Post
 
 
@@ -146,3 +146,52 @@ class TestListHashtags(TestCase):
         self.assertEqual(1, len(response_json['data']['hashtags']['results']))
         self.assertEqual('hello', response_json['data']['hashtags']['results'][0]['hashtag_title'])
         self.assertEqual(10, response_json['data']['hashtags']['results'][0]['count'])
+
+
+class TestFeedbackModel(TestCase):
+    @staticmethod
+    def test_property_type_model_exists():
+        Feedback()
+
+    def test_property_type_model_has_all_required_attributes(self):
+        attributes = ['name', 'email', 'message', 'created_at', 'updated_at', 'state_id']
+        obj = Feedback()
+        test_object_attributes_existence(self, obj, attributes)
+
+    def test_address_model_create_successful(self):
+        created_obj = baker.make(Feedback)
+        test_obj = Feedback.objects.filter(id=created_obj.id).first()
+        self.assertIsNotNone(test_obj)
+
+
+class TestCreateFeedback(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+
+    def test_exist_api(self):
+        response = self.client.post(reverse('core_create_feedback'), format='json')
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rejects_empty_data(self):
+        data = {}
+        response = self.client.post(reverse('core_create_feedback'), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('message', response_json['data'])
+        self.assertIn('name', response_json['data'])
+        self.assertIn('email', response_json['data'])
+
+    def test_successful(self):
+        data = {
+            "name": "Milad",
+            "email": "8590410@gmail.com",
+            "message": "Lorem ipsum dolor sit amet, consectetur"
+        }
+        response = self.client.post(reverse('core_create_feedback'), data=data, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual('ok', response_json['status'])
+        self.assertIn('message', response_json['data']['feedback'])
+        self.assertIn('name', response_json['data']['feedback'])
+        self.assertIn('email', response_json['data']['feedback'])

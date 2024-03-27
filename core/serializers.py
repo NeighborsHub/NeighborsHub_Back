@@ -2,7 +2,7 @@ import datetime
 
 from rest_framework import serializers
 
-from core.models import City, Country, State, Hashtag
+from core.models import City, Country, State, Hashtag, Feedback
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -39,3 +39,13 @@ class HashtagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hashtag
         fields = ['id', 'hashtag_title', 'count']
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
+    message = serializers.CharField(required=True, min_length=10)
+
+    class Meta:
+        model = Feedback
+        fields = ['id', 'name', 'email', 'message', 'created_at', 'updated_at']
