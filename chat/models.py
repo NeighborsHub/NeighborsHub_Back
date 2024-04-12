@@ -6,13 +6,13 @@ from shortuuidfield import ShortUUIDField
 # Create your models here.
 
 class ChatRoom(models.Model):
-    roomId = ShortUUIDField()
+    room_id = ShortUUIDField()
     type = models.CharField(max_length=10, default='DM')
     member = models.ManyToManyField(CustomerUser)
     name = models.CharField(max_length=150, null=True, blank=True)
 
     def __str__(self):
-        return self.roomId + ' -> ' + str(self.name)
+        return self.room_id + ' -> ' + str(self.name)
 
 
 class ChatMessage(models.Model):

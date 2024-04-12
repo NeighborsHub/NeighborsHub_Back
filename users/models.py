@@ -92,6 +92,9 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.username
 
+    def get_avatar(self):
+        return self.avatar.last()
+
 
 class Follow(BaseModel):
     follower = models.ForeignKey(CustomerUser, null=True, blank=True, on_delete=models.PROTECT, related_name='follower')

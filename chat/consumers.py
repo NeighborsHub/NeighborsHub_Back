@@ -6,7 +6,7 @@ from users.models import CustomerUser, OnlineUser
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
-    user_id = None
+    user = None
     room_id = None
     user_rooms = None
 
@@ -33,21 +33,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except:
             pass
 
-    @staticmethod
-    def save_message(self, message, user_id, room_id):
-        user_obj = CustomerUser.objects.get(id=user_id)
-        chat_obj = ChatRoom.objects.get(roomId=room_id)
+    def save_message(self, message, room_id):
+        user_obj = self.user
+        chat_obj = ChatRoom.objects.get(room_id=room_id)
         chat_message_obj = ChatMessage.objects.create(
             chat=chat_obj, user=user_obj, message=message
         )
+        user_avatar = self.user.get_avatar()
         return {
             'action': 'message',
-            'user': user_id,
+            'user': user_obj.id,
             'roomId': room_id,
             'message': message,
-            'userImage': user_obj.image.url,
+            'userImage': {
+                'thumbnail': user_avatar.avatar_thumbnail if user_avatar else None,
+            },
             'userName': user_obj.first_name + " " + user_obj.last_name,
-            'timestamp': str(chat_message_obj.timestamp)
+            'timestamp': str(chat_message_obj.created_at)
         }
 
     async def sendOnlineUserList(self):
@@ -62,17 +64,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send('onlineUser', chat_messages)
 
     async def connect(self):
-        self.user_id = self.scope['url_route']['kwargs']['userId']
+        self.user_id = self.scope['url_route']['kwargs']['user_id']
+        if int(self.user_id) != self.scope.get('user').id:
+            await self.close(403, reason='You are not authorized.')
         self.user_rooms = await database_sync_to_async(
             list
         )(ChatRoom.objects.filter(member=self.user_id))
         for room in self.user_rooms:
             await self.channel_layer.group_add(
-                room.roomId,
+                room.room_id,
                 self.channel_name
             )
         await self.channel_layer.group_add('onlineUser', self.channel_name)
-        self.user = await database_sync_to_async(self.get_user)(self.user_id)
+        self.user = self.scope.get('user')
         await database_sync_to_async(self.add_online_user)(self.user)
         await self.sendOnlineUserList()
         await self.accept()
@@ -82,7 +86,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.sendOnlineUserList()
         for room in self.user_rooms:
             await self.channel_layer.group_discard(
-                room.roomId,
+                room.room_id,
                 self.channel_name
             )
 
@@ -93,15 +97,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         chat_message = {}
         if action == 'message':
             message = text_data_json['message']
-            user_id = text_data_json['user']
+            user_id = self.scope.get('user').id
+
             chat_message = await database_sync_to_async(
                 self.save_message
-            )(message, user_id, room_id)
+            )(message, room_id)
         elif action == 'typing':
             chat_message = text_data_json
         await self.channel_layer.group_send(
             room_id,
             {
+                'user': {'username': self.user.username,
+                         'first_name': self.user.first_name,
+                         'last_name': self.user.last_name},
                 'type': 'chat_message',
                 'message': chat_message
             }

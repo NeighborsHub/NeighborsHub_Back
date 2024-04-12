@@ -35,6 +35,8 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,8 +49,6 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     'rest_framework_gis',
     'django_filters',
-    'channels',
-
     # apps
     'core',
     'users',
@@ -162,6 +162,13 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'NeighborsHub.exceptions.custom_exception_handler',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 10
+}
+
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
 }
 
 # GDAL_LIBRARY_PATH = '/lib/libogdi.so'

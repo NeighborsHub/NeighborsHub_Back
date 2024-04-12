@@ -3,21 +3,23 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import LimitOffsetPagination
+
+from NeighborsHub.permission import CustomAuthentication
 from .serializers import ChatRoomSerializer, ChatMessageSerializer
 from .models import ChatRoom, ChatMessage
 
 
 class ChatRoomView(APIView):
-    @staticmethod
-    def get(request, user_id):
-        chat_rooms = ChatRoom.objects.filter(member=user_id)
+    authentication_classes = (CustomAuthentication,)
+
+    def get(self, request):
+        chat_rooms = ChatRoom.objects.filter(member=self.request.user)
         serializer = ChatRoomSerializer(
             chat_rooms, many=True, context={"request": request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @staticmethod
-    def post(request):
+    def post(self, request):
         serializer = ChatRoomSerializer(
             data=request.data, context={"request": request}
         )
@@ -32,5 +34,5 @@ class MessagesView(ListAPIView):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        room_id = self.kwargs['roomId']
-        return ChatMessage.objects.filter(chat__roomId=room_id).order_by('-created_at')
+        room_id = self.kwargs['room_id']
+        return ChatMessage.objects.filter(chat__room_id=room_id).order_by('-created_at')

@@ -1,7 +1,7 @@
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework import status
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _
 from rest_framework.views import exception_handler
 
 
