@@ -225,8 +225,11 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.posts_created_by.count()
 
     def get_last_user_avatar(self, obj):
-        qs = obj.avatar.last()
-        return UserAvatarSerializer(instance=qs, many=False, context=self.context).data
+        try:
+            qs = obj.get_avatar()
+            return UserAvatarSerializer(instance=qs, many=False, context=self.context).data
+        except Exception:
+            return None
 
     #
     class Meta:

@@ -46,7 +46,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'roomId': room_id,
             'message': message,
             'userImage': {
-                'thumbnail': user_avatar.avatar_thumbnail if user_avatar else None,
+                'thumbnail': user_avatar.avatar_thumbnail.url if user_avatar else None,
             },
             'userName': user_obj.first_name + " " + user_obj.last_name,
             'timestamp': str(chat_message_obj.created_at)
