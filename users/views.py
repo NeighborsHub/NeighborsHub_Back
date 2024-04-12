@@ -116,7 +116,7 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView, VerifyPreR
             'data': {"user": serializer.data, "access_token": f"Bearer {self.create_jwt_authorization(user.id)}"},
         }
         chat_room = ChatRoom.objects.create(
-            type="SELF", name=user.first_name + user.last_name
+            type="SELF", name=user.username,
         )
         chat_room.member.add(user.id)
         return Response(response_data, status=status.HTTP_201_CREATED)

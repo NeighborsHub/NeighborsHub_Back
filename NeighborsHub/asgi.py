@@ -13,6 +13,7 @@ from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
+from NeighborsHub.permission import TokenAuthMiddlewareChannels
 from chat.routing import websocket_urlpatterns
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'NeighborsHub.settings')
@@ -21,7 +22,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'NeighborsHub.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    "websocket": AuthMiddlewareStack(
+    "websocket": TokenAuthMiddlewareChannels(
         URLRouter(
             websocket_urlpatterns
         )
