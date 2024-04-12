@@ -127,3 +127,11 @@ class Address(BaseModel):
     def __str__(self):
         return (f"Address(id={self.id}, status={self.state}, user_id={self.user.id},  "
                 f"created_at={self.created_at}, updated_at={self.updated_at})")
+
+
+class OnlineUser(models.Model):
+    user = models.OneToOneField(CustomerUser, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.user.username

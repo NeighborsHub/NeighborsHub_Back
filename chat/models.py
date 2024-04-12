@@ -1,30 +1,25 @@
 from django.db import models
 from users.models import CustomerUser
-from core.models import BaseModel
+from shortuuidfield import ShortUUIDField
+
 
 # Create your models here.
 
-class Chat(BaseModel):
-    users = models.ManyToManyField(CustomerUser, related_name='chats_users')
-    finished_at = models.DateTimeField(null=True, blank=True)
-    description = models.TextField(null=True,blank=True)
-    def __str__(self):
-        return (f"Chat(id={self.id}")
-
-
-class Message(BaseModel):
-    chat = models.ForeignKey(Chat, on_delete=models.PROTECT)
-    body = models.TextField()
+class ChatRoom(models.Model):
+    roomId = ShortUUIDField()
+    type = models.CharField(max_length=10, default='DM')
+    member = models.ManyToManyField(CustomerUser)
+    name = models.CharField(max_length=20, null=True, blank=True)
 
     def __str__(self):
-        return (f"Message(id={self.id}, chat={self.chat}, body={self.body}, "
-                f"created_at={self.created_at}, created_by={self.created_by})")
+        return self.roomId + ' -> ' + str(self.name)
 
 
-class MessageSeen(models.Model):
-    message = models.ForeignKey(Message, on_delete=models.PROTECT)
-    users = models.ManyToManyField(CustomerUser, related_name='messages_seen_users')
+class ChatMessage(models.Model):
+    chat = models.ForeignKey(ChatRoom, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(CustomerUser, on_delete=models.SET_NULL, null=True)
+    message = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"MessageSeen(id={self.id}, message={self.message}, created_at={self.created_at})"
+        return self.message

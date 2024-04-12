@@ -47,12 +47,14 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     'rest_framework_gis',
     'django_filters',
+    'channels',
 
     # apps
     'core',
     'users',
     'albums',
     'post',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -90,6 +92,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'NeighborsHub.wsgi.application'
+ASGI_APPLICATION = 'NeighborsHub.asgi.application'
+
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -168,7 +172,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 GOOGLE_OAUTH2_CLIENT_ID = os.getenv('GOOGLE_OAUTH2_CLIENT_ID')
 GOOGLE_OAUTH2_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH2_CLIENT_SECRET')
 BASE_FRONTEND_URL = 'http://neighborshub.ca/'
-
 
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'

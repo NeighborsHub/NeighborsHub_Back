@@ -17,6 +17,7 @@ from NeighborsHub.permission import CustomAuthentication, IsOwnerAuthentication,
 from NeighborsHub.redis_management import VerificationEmailRedis, VerificationOTPRedis, AuthenticationTokenRedis
 from NeighborsHub.utils import create_random_chars
 from albums.models import UserAvatar
+from chat.models import ChatRoom
 from core.models import City
 from users.google_oath2 import google_get_user_info
 from users.models import CustomerUser, validate_email, Address, Follow
@@ -114,6 +115,10 @@ class RegisterAPI(ExpressiveCreateModelMixin, generics.CreateAPIView, VerifyPreR
             'status': "ok",
             'data': {"user": serializer.data, "access_token": f"Bearer {self.create_jwt_authorization(user.id)}"},
         }
+        chat_room = ChatRoom.objects.create(
+            type="SELF", name=user.first_name + user.last_name
+        )
+        chat_room.member.add(user.id)
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
