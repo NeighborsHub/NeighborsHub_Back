@@ -11,7 +11,7 @@ class ChatRoomSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         members = validated_data.pop('members')
-        members.append({"id": self.context['request'].user})
+        members.append({"id": self.context['request'].user.id})
         chat_rooms = ChatRoom.objects.create(**validated_data)
         chat_rooms.member.set([CustomerUser.objects.get(**user_data) for user_data in members])
         return chat_rooms
