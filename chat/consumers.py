@@ -33,9 +33,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except:
             pass
 
-    def save_message(self, message, room_id):
+    def save_message(self, message, chat_obj):
         user_obj = self.user
-        chat_obj = ChatRoom.objects.get(room_id=room_id, member=user_obj)
         chat_message_obj = ChatMessage.objects.create(
             chat=chat_obj, user=user_obj, message=message
         )
@@ -43,7 +42,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return {
             'action': 'message',
             'user': user_obj.id,
-            'roomId': room_id,
+            'roomId': chat_obj.room_id,
             'message': message,
             'userImage': {
                 'thumbnail': user_avatar.avatar_thumbnail.url if user_avatar else None,
@@ -94,14 +93,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         action = text_data_json['action']
         room_id = text_data_json['roomId']
+        try:
+            chat_obj = ChatRoom.objects.get(room_id=room_id, member=self.user)
+        except ChatRoom.DoesNotExist:
+            return {'error': 'You are not member of this room.'}
         chat_message = {}
         if action == 'message':
             message = text_data_json['message']
-            user_id = self.scope.get('user').id
-
             chat_message = await database_sync_to_async(
                 self.save_message
-            )(message, room_id)
+            )(message, chat_obj)
         elif action == 'typing':
             chat_message = text_data_json
         await self.channel_layer.group_send(
