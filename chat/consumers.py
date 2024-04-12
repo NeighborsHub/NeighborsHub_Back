@@ -33,6 +33,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except:
             pass
 
+    @staticmethod
+    def get_chat_room(room_id, user):
+        try:
+            return ChatRoom.objects.get(room_id=room_id, member=user)
+        except ChatRoom.DoesNotExist:
+            return None
+
     def save_message(self, message, chat_obj):
         user_obj = self.user
         chat_message_obj = ChatMessage.objects.create(
@@ -93,10 +100,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         action = text_data_json['action']
         room_id = text_data_json['roomId']
-        try:
-            chat_obj = ChatRoom.objects.get(room_id=room_id, member=self.user)
-        except ChatRoom.DoesNotExist:
-            return {'error': 'You are not member of this room.'}
+        chat_obj = await database_sync_to_async(self.get_chat_room)(room_id, self.user)
+        if chat_obj is None:
+            return {'error': 'Room not found'}
         chat_message = {}
         if action == 'message':
             message = text_data_json['message']
