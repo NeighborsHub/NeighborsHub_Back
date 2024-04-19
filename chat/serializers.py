@@ -6,19 +6,92 @@ from users.serializers import UserSerializer
 
 
 class ChatRoomSerializer(serializers.ModelSerializer):
-    member = UserSerializer(many=True, read_only=True)
-    members = serializers.ListField(write_only=True)
+    type = serializers.ChoiceField(required=True, choices=ChatRoom.CHAT_ROOM_CHOICES)
+    members = serializers.ListField(write_only=True, min_length=1)
+
+    def validate(self, attrs):
+        if attrs.get('type') == 'direct' and len(attrs.get('members')) > 1:
+            raise serializers.ValidationError({'members': 'In direct message can`t be more than one member'})
+
+        attrs.get('members').append({"id": self.context['request'].user.id})
+        members = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('members')]
+
+        if attrs.get('type') == 'direct' and ChatRoom.objects.filter(type=attrs.get('type'),
+                                                                     member__in=[m.id for m in members]).exists():
+            raise serializers.ValidationError({'members': 'You have already Direct Message for This person'})
+
+        attrs['members'] = members
+        return attrs
 
     def create(self, validated_data):
         members = validated_data.pop('members')
-        members.append({"id": self.context['request'].user.id})
+        # members.append({"id": self.context['request'].user.id})
         chat_rooms = ChatRoom.objects.create(**validated_data)
-        chat_rooms.member.set([CustomerUser.objects.get(**user_data) for user_data in members])
+        chat_rooms.member.set(members)
+        if self.validated_data['type'] != 'direct':
+            chat_rooms.admin.set([self.context.get('request').user])
         return chat_rooms
 
     class Meta:
         model = ChatRoom
         exclude = ['id']
+
+
+class ChatRoomMembersSerializer(serializers.ModelSerializer):
+    member = UserSerializer(many=True, read_only=True)
+    admin = UserSerializer(many=True, read_only=True)
+    members = serializers.ListField(write_only=True, allow_null=True, required=False)
+    admins = serializers.ListField(write_only=True, allow_null=True, required=False)
+    delete_members = serializers.ListField(write_only=True, allow_null=True, required=False)
+    delete_admins = serializers.ListField(write_only=True, allow_null=True, required=False)
+
+    def validate(self, attrs):
+
+        if self.instance.type == 'direct' and \
+                (len(attrs.get('members', [])) > 0 or len(attrs.get('delete_members', [])) > 0):
+            raise serializers.ValidationError({'members': 'In direct message can`t be more or less than one member'})
+
+        if self.instance.type == 'direct' and \
+                (len(attrs.get('admins', [])) > 0 or len(attrs.get('delete_admins', [])) > 0):
+            raise serializers.ValidationError({'members': 'In direct message can`t have any admin'})
+
+        if len(attrs.get('members', [])) > 0:
+            attrs['members'] = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('members')]
+
+        if len(attrs.get('delete_members', [])) > 0:
+            attrs['delete_members'] = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('delete_members')]
+
+        if len(attrs.get('admins', [])) > 0:
+            attrs['admins'] = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('admins')]
+
+        if len(attrs.get('delete_admins', [])) > 0:
+            attrs['delete_admins'] = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('delete_admins')]
+        return attrs
+
+    def update(self, instance, validated_data):
+        members = validated_data.pop('members') if 'members' in validated_data else None
+        delete_members = validated_data.pop('delete_members') if 'delete_members' in validated_data else None
+        admins = validated_data.pop('admins') if 'admins' in validated_data else None
+        delete_admins = validated_data.pop('delete_admins') if 'delete_admins' in validated_data else None
+
+        if members is not None:
+            for member in members:
+                instance.member.add(member)
+        if delete_members is not None:
+            for delete_member in delete_members:
+                instance.member.remove(delete_member)
+
+        if admins is not None and self.instance.type != 'direct':
+            for admin in admins:
+                instance.admin.add(admin)
+        if delete_admins is not None and self.instance.type != 'direct':
+            for admin in admins:
+                instance.admin.remove(admin)
+        return super().update(instance, validated_data)
+
+    class Meta:
+        model = ChatRoom
+        fields = ['members', 'member', 'admins', 'admin', 'delete_members', 'delete_admins']
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):

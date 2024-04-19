@@ -82,3 +82,9 @@ class NotOwnAddressException(CustomException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_code = 'Invalid input'
     default_detail = {'address_id': _("Invalid address.")}
+
+
+class YouAreNotGroupAdminException(CustomException):
+    status_code = status.HTTP_403_FORBIDDEN
+    default_code = 'Forbidden'
+    default_detail = {'admin': _("Needs be admin to access this")}
