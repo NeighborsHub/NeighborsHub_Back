@@ -88,13 +88,8 @@ class TestCreateDirectMessage(TestCase):
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual('ok', response_json['status'])
-        self.assertIn('member', response_json['data'])
-        self.assertEqual(3, len(response_json['data']['member']))
         self.assertIn('type', response_json['data'])
         self.assertIn('room_id', response_json['data'])
-        self.assertIn('admin', response_json['data'])
-        self.assertIn('admin', response_json['data'])
-        self.assertEqual(1, len(response_json['data']['admin']))
 
 
 class TestChatRoomMemberListMessage(TestCase):
@@ -138,3 +133,41 @@ class TestChatRoomMemberListMessage(TestCase):
         self.assertEqual(3, len(response_json['data']['chat_room_members']['member']))
         self.assertIn('admin', response_json['data']['chat_room_members'])
         self.assertEqual(2, len(response_json['data']['chat_room_members']['admin']))
+
+
+class TestSameChatRoomsMessage(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.tmp_user = baker.make(CustomerUser)
+        for _ in range(10):
+            chat_room = baker.make(ChatRoom, type='group')
+            chat_room.member.set([self.tmp_user, self.user])
+        direct_chat = baker.make(ChatRoom, type='direct')
+        direct_chat.member.set([self.tmp_user, self.user])
+
+    def test_api_exists_forbidden_anonymous(self):
+        response = self.client.get(reverse('same_chat_rooms_list',
+                                           kwargs={'user_id': self.tmp_user.id}),
+                                   data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_reject_updates_anonymous_user(self):
+        anonymous_user = baker.make(CustomerUser)
+        self.client.force_authenticate(anonymous_user)
+        response = self.client.get(reverse('same_chat_rooms_list',
+                                           kwargs={'user_id': self.tmp_user.id}),
+                                   data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(0, response_json['data']['chat_rooms']['count'])
+
+    def test_create_group_chatroom(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('same_chat_rooms_list',
+                                           kwargs={'user_id': self.tmp_user.id}),
+                                   data={}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual('ok', response_json['status'])
+        self.assertEqual(11, response_json['data']['chat_rooms']['count'])

@@ -65,5 +65,18 @@ class MessagesView(ExpressiveListModelMixin, ListAPIView):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
-        room_id = self.kwargs['room_id']
-        return ChatMessage.objects.filter(chat__room_id=room_id).order_by('-created_at')
+        chats = ChatMessage.objects.filter(chat__room_id=self.kwargs['room_id'])
+        chats = chats.exclude(deleted_by=self.request.user).order_by('-created_at')
+        return chats
+
+
+class SameChatRoomAPI(ExpressiveListModelMixin, ListAPIView):
+    authentication_classes = (CustomAuthentication,)
+    serializer_class = ChatRoomSerializer
+    plural_name = 'chat_rooms'
+
+    def get_queryset(self):
+        chats = ChatRoom.objects.filter(member=self.request.user)
+        chats = chats.filter(member=CustomerUser.objects.get(id=self.kwargs['user_id']))
+        chats = chats.order_by('type', '-created_at')
+        return chats
