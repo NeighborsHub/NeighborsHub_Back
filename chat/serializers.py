@@ -59,7 +59,8 @@ class ChatRoomMembersSerializer(serializers.ModelSerializer):
             attrs['members'] = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('members')]
 
         if len(attrs.get('delete_members', [])) > 0:
-            attrs['delete_members'] = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('delete_members')]
+            attrs['delete_members'] = [CustomerUser.objects.get(**user_data) for user_data in
+                                       attrs.get('delete_members')]
 
         if len(attrs.get('admins', [])) > 0:
             attrs['admins'] = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('admins')]
@@ -105,3 +106,8 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     @staticmethod
     def get_user_name(obj):
         return obj.user.first_name + ' ' + obj.user.last_name
+
+
+class RemoveChatMessageSerializer(serializers.Serializer):
+    delete_my_messages_for_all = serializers.BooleanField(default=False, required=False)
+    delete_all_message_for_me = serializers.BooleanField(default=False, required=False)

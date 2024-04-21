@@ -1,15 +1,17 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.generics import ListAPIView, UpdateAPIView
+from rest_framework.generics import ListAPIView, UpdateAPIView, DestroyAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
 from NeighborsHub.custom_view_mixin import ExpressiveListModelMixin, ExpressiveUpdateModelMixin
 from NeighborsHub.exceptions import YouAreNotGroupAdminException
 from NeighborsHub.permission import CustomAuthentication
 from users.models import CustomerUser
-from .serializers import ChatRoomSerializer, ChatMessageSerializer, ChatRoomMembersSerializer
+from .serializers import ChatRoomSerializer, ChatMessageSerializer, ChatRoomMembersSerializer, \
+    RemoveChatMessageSerializer
 from .models import ChatRoom, ChatMessage
+from django.utils.translation import gettext as _
 
 
 class ChatRoomView(APIView):
@@ -80,3 +82,39 @@ class SameChatRoomAPI(ExpressiveListModelMixin, ListAPIView):
         chats = chats.filter(member=CustomerUser.objects.get(id=self.kwargs['user_id']))
         chats = chats.order_by('type', '-created_at')
         return chats
+
+
+class LeaveChatRoomAPI(DestroyAPIView):
+    authentication_classes = (CustomAuthentication,)
+    serializer_class = RemoveChatMessageSerializer
+    plural_name = 'chat_rooms'
+
+    def get_object(self):
+        return ChatRoom.objects.get(room_id=self.kwargs['room_id'])
+
+    def delete_my_message_for_all(self, chatroom):
+        return ChatMessage.objects.filter(chat=chatroom, user=self.request.user).delete()
+
+    def delete_all_message_for_me(self, chatroom):
+        chat_messages = ChatMessage.objects.filter(chat=chatroom)
+        for chat_message in chat_messages:
+            chat_message.deleted_by.add(self.request.user)
+        return
+
+    def perform_destroy(self, instance):
+        instance.member.remove(self.request.user)
+
+        serializer = RemoveChatMessageSerializer(data=self.request.data)
+        serializer.is_valid(raise_exception=False)
+
+        if serializer.validated_data['delete_my_messages_for_all']:
+            self.delete_my_message_for_all(instance)
+
+        if serializer.validated_data['delete_all_message_for_me']:
+            self.delete_all_message_for_me(instance)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({"status": "ok", 'data': {}, 'message': _('Left the group successfully.')},
+                        status=status.HTTP_204_NO_CONTENT)

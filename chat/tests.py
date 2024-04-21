@@ -171,3 +171,35 @@ class TestSameChatRoomsMessage(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual('ok', response_json['status'])
         self.assertEqual(11, response_json['data']['chat_rooms']['count'])
+
+
+class TestLeaveChatRoom(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.tmp_user = baker.make(CustomerUser)
+        self.chat_room = baker.make(ChatRoom, type='group')
+        self.chat_room.member.set([self.tmp_user, self.user])
+        baker.make(ChatMessage, chat=self.chat_room, user=self.user, _quantity=10)
+        baker.make(ChatMessage, chat=self.chat_room, user=self.tmp_user, _quantity=10)
+
+    def test_api_exists_forbidden_anonymous(self):
+        response = self.client.delete(reverse('chat_room_leave',
+                                              kwargs={'room_id': self.chat_room.room_id}),
+                                      data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_left_group_successfully(self):
+        data = {
+            'delete_all_message_for_me': True,
+            'delete_my_messages_for_all': True
+        }
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(reverse('chat_room_leave',
+                                              kwargs={'room_id': self.chat_room.room_id}),
+                                      data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        messages = ChatMessage.objects.filter(chat=self.chat_room, deleted_by=self.user)
+        self.assertEqual(10, messages.count())
+        messages = ChatMessage.objects.filter(chat=self.chat_room)
+        self.assertEqual(10, messages.count())
