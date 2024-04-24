@@ -108,6 +108,16 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         return obj.user.first_name + ' ' + obj.user.last_name
 
 
-class RemoveChatMessageSerializer(serializers.Serializer):
+class IDFieldSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+
+
+class LeaveChatRoomSerializer(serializers.Serializer):
     delete_my_messages_for_all = serializers.BooleanField(default=False, required=False)
     delete_all_message_for_me = serializers.BooleanField(default=False, required=False)
+
+
+class RemoveChatMessageSerializer(serializers.Serializer):
+    delete_my_messages_for_all = serializers.BooleanField(default=False, required=False)
+    delete_all_message_for_me = serializers.BooleanField(default=True, required=False)
+    message_ids = serializers.ListField(required=True, child=IDFieldSerializer(required=True), min_length=1)
