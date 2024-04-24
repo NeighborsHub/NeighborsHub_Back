@@ -132,27 +132,25 @@ class DeleteChatMessagesAPI(DestroyAPIView):
         return ChatMessage.objects.filter(chat=chatroom, id__in=[m['id'] for m in message_ids],
                                           user=self.request.user).delete()
 
+    def delete_all_message_for_me(self, chatroom, message_ids):
+        chat_messages = ChatMessage.objects.filter(chat=chatroom, id__in=[m['id'] for m in message_ids])
+        for chat_message in chat_messages:
+            chat_message.deleted_by.add(self.request.user)
+        return
 
-def delete_all_message_for_me(self, chatroom, message_ids):
-    chat_messages = ChatMessage.objects.filter(chat=chatroom, id__in=[m['id'] for m in message_ids])
-    for chat_message in chat_messages:
-        chat_message.deleted_by.add(self.request.user)
-    return
+    def perform_destroy(self, instance):
+        serializer = RemoveChatMessageSerializer(data=self.request.data)
+        serializer.is_valid(raise_exception=False)
 
+        if serializer.validated_data['delete_my_messages_for_all']:
+            self.delete_my_message_for_all(instance, serializer.validated_data['message_ids'])
 
-def perform_destroy(self, instance):
-    serializer = RemoveChatMessageSerializer(data=self.request.data)
-    serializer.is_valid(raise_exception=False)
-
-    if serializer.validated_data['delete_my_messages_for_all']:
-        self.delete_my_message_for_all(instance, serializer.validated_data['message_ids'])
-
-    if serializer.validated_data['delete_all_message_for_me']:
-        self.delete_all_message_for_me(instance, serializer.validated_data['message_ids'])
+        if serializer.validated_data['delete_all_message_for_me']:
+            self.delete_all_message_for_me(instance, serializer.validated_data['message_ids'])
 
 
-def destroy(self, request, *args, **kwargs):
-    instance = self.get_object()
-    self.perform_destroy(instance)
-    return Response({"status": "ok", 'data': {}, 'message': _('Messages deleted successfully.')},
-                    status=status.HTTP_204_NO_CONTENT)
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({"status": "ok", 'data': {}, 'message': _('Messages deleted successfully.')},
+                        status=status.HTTP_204_NO_CONTENT)
