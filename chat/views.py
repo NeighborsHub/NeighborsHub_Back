@@ -148,7 +148,6 @@ class DeleteChatMessagesAPI(DestroyAPIView):
         if serializer.validated_data['delete_all_message_for_me']:
             self.delete_all_message_for_me(instance, serializer.validated_data['message_ids'])
 
-
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)

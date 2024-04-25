@@ -40,14 +40,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except ChatRoom.DoesNotExist:
             return None
 
-    def save_message(self, message, chat_obj):
+    def save_message(self, message, chat_obj, reply_to, post_id):
         user_obj = self.user
         chat_message_obj = ChatMessage.objects.create(
-            chat=chat_obj, user=user_obj, message=message
+            chat=chat_obj, user=user_obj, message=message, reply_to_id=reply_to, post_id=post_id
         )
         user_avatar = self.user.get_avatar()
         return {
             'action': 'message',
+            'replyId': chat_obj.reply_id,
+            'postId': chat_obj.post_id,
             'user': user_obj.id,
             'roomId': chat_obj.room_id,
             'message': message,
@@ -58,7 +60,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'timestamp': str(chat_message_obj.created_at)
         }
 
-    async def sendOnlineUserList(self):
+    async def send_online_user_list(self):
         online_user_list = await database_sync_to_async(self.get_online_users)()
         chat_messages = {
             'type': 'chat_message',
@@ -84,12 +86,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add('onlineUser', self.channel_name)
         self.user = self.scope.get('user')
         await database_sync_to_async(self.add_online_user)(self.user)
-        await self.sendOnlineUserList()
+        await self.send_online_user_list()
         await self.accept()
 
     async def disconnect(self, close_code):
         await database_sync_to_async(self.delete_online_user)(self.user)
-        await self.sendOnlineUserList()
+        await self.send_online_user_list()
         for room in self.user_rooms:
             await self.channel_layer.group_discard(
                 room.room_id,
@@ -106,9 +108,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         chat_message = {}
         if action == 'message':
             message = text_data_json['message']
+            reply_to_id = text_data_json.get('replyId')
+            post_id = text_data_json.get('postId')
             chat_message = await database_sync_to_async(
                 self.save_message
-            )(message, chat_obj)
+            )(message, chat_obj, reply_to_id, post_id)
         elif action == 'typing':
             chat_message = text_data_json
         await self.channel_layer.group_send(
