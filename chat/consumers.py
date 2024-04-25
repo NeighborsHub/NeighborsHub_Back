@@ -47,9 +47,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         user_avatar = self.user.get_avatar()
         return {
+            'id': chat_message_obj.id,
             'action': 'message',
-            'replyId': chat_obj.reply_id,
-            'postId': chat_obj.post_id,
+            'replyId': reply_to,
+            'postId': post_id,
             'user': user_obj.id,
             'roomId': chat_obj.room_id,
             'message': message,
