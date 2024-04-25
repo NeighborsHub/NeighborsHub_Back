@@ -101,7 +101,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ChatMessage
-        exclude = ['chat']
+        exclude = ['chat', 'deleted_by']
 
     @staticmethod
     def get_user_name(obj):

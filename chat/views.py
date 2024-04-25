@@ -42,10 +42,11 @@ class ChatRoomMembersView(ExpressiveListModelMixin, ExpressiveUpdateModelMixin, 
     pagination_class = LimitOffsetPagination
     serializer_class = ChatRoomMembersSerializer
     singular_name = "chat_room_members"
+    plural_name = "chat_room_members"
 
     def get_queryset(self):
         room_id = self.kwargs['room_id']
-        return ChatRoom.objects.get(room_id=room_id)
+        return ChatRoom.objects.get(room_id=room_id).member.all()
 
     def get_object(self):
         room_id = self.kwargs['room_id']
@@ -63,8 +64,10 @@ class ChatRoomMembersView(ExpressiveListModelMixin, ExpressiveUpdateModelMixin, 
 
 
 class MessagesView(ExpressiveListModelMixin, ListAPIView):
+    authentication_classes = (CustomAuthentication,)
     serializer_class = ChatMessageSerializer
     pagination_class = LimitOffsetPagination
+    plural_name = 'chat_messages'
 
     def get_queryset(self):
         chats = ChatMessage.objects.filter(chat__room_id=self.kwargs['room_id'])
@@ -116,8 +119,7 @@ class LeaveChatRoomAPI(DestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
-        return Response({"status": "ok", 'data': {}, 'message': _('Left the group successfully.')},
-                        status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DeleteChatMessagesAPI(DestroyAPIView):

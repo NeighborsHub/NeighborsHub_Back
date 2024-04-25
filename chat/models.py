@@ -12,10 +12,10 @@ class ChatRoom(models.Model):
     )
     room_id = ShortUUIDField()
     type = models.CharField(max_length=10, default='direct', choices=CHAT_ROOM_CHOICES)
-    member = models.ManyToManyField(CustomerUser, related_name='member', blank=True)
+    member = models.ManyToManyField(CustomerUser, related_name='members', blank=True)
     post = models.ForeignKey('post.Post', on_delete=models.SET_NULL, null=True)
     name = models.CharField(max_length=150, null=True, blank=True)
-    admin = models.ManyToManyField(CustomerUser, related_name='admin', blank=True)
+    admin = models.ManyToManyField(CustomerUser, related_name='admins', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
