@@ -56,7 +56,7 @@ class ChatRoomMembersView(ExpressiveListModelMixin, ExpressiveUpdateModelMixin, 
         if not serializer.is_valid():
             return Response({"status": "error", 'data': serializer.errors, 'message': 'Inputs has errors'}
                             , status=status.HTTP_400_BAD_REQUEST)
-        obj = self.get_queryset()
+        obj = self.get_object()
         if self.request.user not in obj.admin.all() and \
                 (len(serializer.validated_data['admins']) > 0 or len(serializer.validated_data['delete_admins']) > 0):
             raise YouAreNotGroupAdminException()
