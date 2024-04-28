@@ -5,7 +5,7 @@ from users.views import PreRegisterAPI, VerifyPreRegisterAPI, RegisterAPI, Verif
     VerifyMobileApi, SendOtpLoginApi, VerifyOtpLoginApi, SendForgetPasswordApi, VerifyOtpForgetPasswordApi, \
     VerifyEmailForgetPasswordAPI, VerifyOTPEmailAPI, ListCreateUserAddressAPI, RetrieveUpdateUserAddressAPI, \
     UpdateUserPasswordAPI, RequestSendOTPUpdateMobile, VerifySendOTPUpdateMobile, UnfollowUserAPI, FollowUserApi, \
-    GoogleLoginAPI, RetrieveUpdateUserAPI, UserDetailAPI, GoogleSetpasswordAPI
+    GoogleLoginAPI, RetrieveUpdateUserAPI, UserDetailAPI, GoogleSetpasswordAPI, UpdateUserNameAPI
 
 urlpatterns = [
     path('auth/pre-register', PreRegisterAPI.as_view(), name='user_preregister'),
@@ -32,6 +32,7 @@ urlpatterns = [
     path('me/address/<int:pk>', RetrieveUpdateUserAddressAPI.as_view(), name='user_get_update_address'),
     path('me/update-password', UpdateUserPasswordAPI.as_view(), name='user_update_password'),
     path('me/update-mobile', RequestSendOTPUpdateMobile.as_view(), name='user_update_mobile'),
+    path('me/update-username', UpdateUserNameAPI.as_view(), name='update_username'),
     path('me/verify-update-mobile', VerifySendOTPUpdateMobile.as_view(), name='user_verify_update_mobile'),
     path('user/<int:user_pk>/follow', FollowUserApi.as_view(), name='user_follow'),
     path('user/<int:user_pk>/unfollow', UnfollowUserAPI.as_view(), name='user_unfollow'),

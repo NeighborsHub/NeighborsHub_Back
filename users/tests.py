@@ -16,6 +16,7 @@ USER_VALID_DATA = {
     'mobile': '09373875028',
     'email': 'mldtavakkoli@gmail.com',
     'first_name': 'Milad',
+    'username': 'Milad',
     'last_name': 'Tavakoli',
     'password': 'n00b',
     'is_verified_mobile': False,
@@ -175,6 +176,7 @@ class TestRegisterUser(TestCase):
             'first_name': 'Milad',
             'last_name': 'Tavakoli',
             'password': 'noob',
+            'username': '123',
             'email_mobile': 'mldtavakkoli',
             'otp': '00000'
 
@@ -186,6 +188,7 @@ class TestRegisterUser(TestCase):
         self.assertEqual('error', response_json['status'])
         self.assertIn('message', response_json)
         self.assertIn('email_mobile', response_json['data'])
+        self.assertIn('username', response_json['data'])
 
     def test_registered_successfully_with_mail(self):
         with patch('users.utils.create_mobile_otp') as mock_create_otp:
@@ -194,6 +197,7 @@ class TestRegisterUser(TestCase):
                              format='json')
             valid_input_data = {
                 'email_mobile': USER_VALID_DATA['email'],
+                'username': USER_VALID_DATA['username'],
                 'first_name': USER_VALID_DATA['first_name'],
                 'last_name': USER_VALID_DATA['last_name'],
                 'password': USER_VALID_DATA['password'],
@@ -205,6 +209,7 @@ class TestRegisterUser(TestCase):
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
             self.assertEqual(response_json['status'], 'ok')
             self.assertEqual(response_json['data']['user']['email'], USER_VALID_DATA['email'])
+            self.assertEqual(response_json['data']['user']['username'], USER_VALID_DATA['username'].lower())
             self.assertEqual(response_json['data']['user']['mobile'], None)
             self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
             self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
@@ -213,6 +218,7 @@ class TestRegisterUser(TestCase):
 
             created_user = get_user_model().objects.filter(
                 email=USER_VALID_DATA['email'],
+                username=USER_VALID_DATA['username'].lower(),
                 first_name=USER_VALID_DATA['first_name'],
                 last_name=USER_VALID_DATA['last_name'],
                 is_active=False,
@@ -226,6 +232,7 @@ class TestRegisterUser(TestCase):
                              format='json')
             valid_input_data = {
                 'email_mobile': USER_VALID_DATA['mobile'],
+                'username': USER_VALID_DATA['username'],
                 # 'first_name': USER_VALID_DATA['first_name'],
                 # 'last_name': USER_VALID_DATA['last_name'],
                 'password': USER_VALID_DATA['password'],
@@ -238,6 +245,7 @@ class TestRegisterUser(TestCase):
             self.assertEqual(response_json['status'], 'ok')
             self.assertEqual(response_json['data']['user']['email'], None)
             self.assertEqual(response_json['data']['user']['mobile'], USER_VALID_DATA['mobile'])
+            self.assertEqual(response_json['data']['user']['username'], USER_VALID_DATA['username'].lower())
             # self.assertEqual(response_json['data']['user']['first_name'], USER_VALID_DATA['first_name'])
             # self.assertEqual(response_json['data']['user']['last_name'], USER_VALID_DATA['last_name'])
             self.assertIn('access_token', response_json['data'])
@@ -245,6 +253,7 @@ class TestRegisterUser(TestCase):
 
             created_user = get_user_model().objects.filter(
                 mobile=USER_VALID_DATA['mobile'],
+                username=USER_VALID_DATA['username'].lower(),
                 # first_name=USER_VALID_DATA['first_name'],
                 # last_name=USER_VALID_DATA['last_name'],
                 is_active=False,
@@ -1075,6 +1084,7 @@ class TestUserDetail(TestCase):
         self.assertEqual(f"{USER_VALID_DATA['mobile'][:3]}***{USER_VALID_DATA['mobile'][-2:]}",
                          response_json['data']['user']['mobile'])
 
+
 class TestUserSetPassword(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
@@ -1099,3 +1109,31 @@ class TestUserSetPassword(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual('ok', response_json['status'])
 
+
+class TestUpdateUserName(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+
+    def test_rejects_not_authenticated_user(self):
+        response = self.client.post(
+            reverse('update_username'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rejects_exists_username(self):
+        anonymous_user = baker.make(CustomerUser, username='miladnoob')
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            reverse('update_username'), data={'username': 'miladnoob'}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response_json['status'])
+        self.assertIn('username', response_json['data'])
+
+    def test_update_username_successfully(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.put(
+            reverse('update_username'), data={'username': 'miladnoob'}, format='json')
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('ok', response_json['status'])

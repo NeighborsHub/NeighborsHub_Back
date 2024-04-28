@@ -25,7 +25,8 @@ from users.serializers import UserRegistrationSerializer, LoginSerializer, \
     SendMobileOtpSerializer, VerifyOtpMobileSerializer, EmailMobileFieldSerializer, VerifyOtpForgetPasswordSerializer, \
     VerifyEmailForgetPasswordSerializer, SendEmailOtpSerializer, VerifyEmailOtpSerializer, \
     VerifyEmailMobileFieldSerializer, ListCreateAddressSerializer, UpdateUserPasswordSerializer, UpdateMobileSerializer, \
-    VerifyUpdateMobileSerializer, GoogleOATHLoginSerializer, UserSerializer, GoogleSetPasswordSerializer
+    VerifyUpdateMobileSerializer, GoogleOATHLoginSerializer, UserSerializer, GoogleSetPasswordSerializer, \
+    UpdateUsernameSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -477,6 +478,24 @@ class RequestSendOTPUpdateMobile(APIView):
                         issued_for=f'UPDATE/MOBILE_{token}_{user.id}')
 
         return Response(data={"status": "ok", "message": _('Otp sent'), 'data': {'token': token}})
+
+
+class UpdateUserNameAPI(APIView):
+    authentication_classes = (CustomAuthentication,)
+
+    def put(self, request):
+        user = self.request.user
+        serializer = UpdateUsernameSerializer(data=request.data,  context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        user.username = serializer.validated_data['username']
+        user.save()
+        return Response(data={"status": "ok", "message": _('Username changed.'), 'data': {}})
+
+    def post(self, request):
+        user = self.request.user
+        serializer = UpdateUsernameSerializer(data=request.data,  context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        return Response(data={"status": "ok", "message": _("It's ok! "), 'data': {}})
 
 
 class VerifySendOTPUpdateMobile(APIView):

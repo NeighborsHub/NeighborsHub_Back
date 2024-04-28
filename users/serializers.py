@@ -15,10 +15,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(required=False)
     password = serializers.CharField(required=True, write_only=True)
     otp = serializers.CharField(required=True, write_only=True)
+    username = serializers.CharField(required=True, min_length=5, max_length=32)
 
     class Meta:
         model = get_user_model()
-        fields = ['email', 'mobile', 'first_name', 'last_name', 'password', 'otp', 'email_mobile']
+        fields = ['email', 'mobile', 'first_name', 'last_name', 'password', 'otp', 'email_mobile', 'username']
 
     @staticmethod
     def validate_email_mobile(value):
@@ -32,9 +33,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             return value.lower()
         raise serializers.ValidationError(_('Invalid email/mobile format'))
 
+    @staticmethod
+    def validate_username(value):
+        if get_user_model().objects.filter(username=value.lower()).exists():
+            raise serializers.ValidationError(_('Username exists. Choose another username.'))
+        return value.lower()
+
     def create(self, validated_data):
         is_email = validate_email(validated_data['email_mobile'])
         user = get_user_model().objects.create(
+            username=validated_data['username'],
             email=validated_data['email_mobile'] if is_email else None,
             mobile=validated_data['email_mobile'] if not is_email else None,
             first_name=validated_data.get('first_name'),
@@ -235,7 +243,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['first_name', 'last_name', 'email', 'mobile', 'id', 'avatar', 'follower_count', 'following_count',
-                  'posts_count']
+                  'posts_count', 'username']
 
 
 class UserPublicSerializer(serializers.ModelSerializer):
@@ -304,6 +312,19 @@ class UpdateMobileSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ['new_mobile', ]
+
+
+class UpdateUsernameSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=True, min_length=5, max_length=32)
+
+    def validate_username(self, value):
+        if get_user_model().objects.filter(username=value.lower()).exclude(id=self.context['request'].user.id).exists():
+            raise serializers.ValidationError(_('Username exists. Choose another username.'))
+        return value.lower()
+
+    class Meta:
+        model = get_user_model()
+        fields = ['username', ]
 
 
 class VerifyUpdateMobileSerializer(serializers.ModelSerializer):

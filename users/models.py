@@ -86,7 +86,7 @@ class CustomerUser(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
 
     def save(self, *args, **kwargs):
-        self.username = uuid4().hex
+        self.username = self.username if self.username is not None else uuid4().hex
         super().save(*args, **kwargs)
 
     def __str__(self):
