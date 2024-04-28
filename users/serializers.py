@@ -212,6 +212,7 @@ class UserSerializer(serializers.ModelSerializer):
     follower_count = serializers.SerializerMethodField('get_user_follower_count')
     following_count = serializers.SerializerMethodField('get_user_following_count')
     posts_count = serializers.SerializerMethodField('get_user_posts_count')
+    username = serializers.CharField(required=False, allow_null=False, allow_blank=False, min_length=5, max_length=32)
 
     def get_user_public_email(self, obj):
         if obj.email is not None and self.context['request'].user is None:
@@ -238,6 +239,14 @@ class UserSerializer(serializers.ModelSerializer):
             return UserAvatarSerializer(instance=qs, many=False, context=self.context).data
         except Exception:
             return None
+
+    def validate_username(self, value):
+        if value is None:
+            return
+        if get_user_model().objects.filter(username=value.lower()).exclude(id=self.context['request'].user.id).exists():
+            raise serializers.ValidationError(_('Username exists. Choose another username.'))
+        return value.lower()
+
 
     #
     class Meta:

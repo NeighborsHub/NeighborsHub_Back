@@ -559,7 +559,18 @@ class TestRetrieveUpdateUser(TestCase):
         self.assertEqual(USER_VALID_DATA['last_name'], response_json['data']['user']['last_name'])
         self.assertEqual(USER_VALID_DATA['email'], response_json['data']['user']['email'])
         self.assertEqual(USER_VALID_DATA['mobile'], response_json['data']['user']['mobile'])
+        self.assertEqual(USER_VALID_DATA['username'].lower(), response_json['data']['user']['username'])
 
+    def test_update_username(self):
+        anonymous_user = baker.make(CustomerUser, username='miladnoob')
+        self.client.force_authenticate(self.user)
+        response = self.client.put(
+            reverse('user_detail_update'), data={'username':'miladnoob'}, format='json')
+        response_json = response.json()
+        print(response_json)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual('error', response_json['status'])
+        self.assertIn('username', response_json['data'])
 
 class TestSendForgetPasswordUser(TestCase):
     def setUp(self) -> None:
