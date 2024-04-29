@@ -1126,7 +1126,7 @@ class TestUpdateUserName(TestCase):
         self.user = _create_user()
 
     def test_rejects_not_authenticated_user(self):
-        response = self.client.post(
+        response = self.client.put(
             reverse('update_username'), data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

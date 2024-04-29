@@ -3,6 +3,7 @@ import datetime
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
 
 from NeighborsHub.custom_jwt import verify_custom_token, generate_auth_token
 from NeighborsHub.custom_view_mixin import ExpressiveCreateModelMixin, ExpressiveListModelMixin, \
@@ -481,10 +482,12 @@ class RequestSendOTPUpdateMobile(APIView):
 
 
 class UpdateUserNameAPI(APIView):
-    authentication_classes = (CustomAuthentication,)
+    authentication_classes = (CustomAuthenticationWithoutEffect,)
 
     def put(self, request):
         user = self.request.user
+        if user is None:
+            raise AuthenticationFailed()
         serializer = UpdateUsernameSerializer(data=request.data,  context={"request": request})
         serializer.is_valid(raise_exception=True)
         user.username = serializer.validated_data['username']

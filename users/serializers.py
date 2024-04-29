@@ -327,7 +327,10 @@ class UpdateUsernameSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=True, min_length=5, max_length=32)
 
     def validate_username(self, value):
-        if get_user_model().objects.filter(username=value.lower()).exclude(id=self.context['request'].user.id).exists():
+        user_id = self.context['request'].user.id if self.context['request'].user is not None else None
+        query = get_user_model().objects.filter(username=value.lower())
+        query = query.exclude(id=user_id) if query else query
+        if query.exists():
             raise serializers.ValidationError(_('Username exists. Choose another username.'))
         return value.lower()
 
