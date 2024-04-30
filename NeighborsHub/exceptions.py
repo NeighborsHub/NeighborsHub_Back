@@ -63,7 +63,7 @@ class NotValidOTPAPIException(CustomException):
 class IncorrectUsernamePasswordException(CustomException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_code = 'login'
-    default_detail = _("Email/Mobile or password is incorrect")
+    default_detail = _("Email/Mobile/Username or password is incorrect")
 
 
 class ServerErrorException(CustomException):

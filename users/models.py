@@ -50,7 +50,7 @@ class CustomUserManager(UserManager):
         return self._create_user(mobile, email, password, **extra_fields)
 
     def get_user_with_mobile_or_mail(self, user_field):
-        return self.get(Q(email=user_field) | Q(mobile=user_field))
+        return self.get(Q(email=user_field) | Q(mobile=user_field) | Q(username=user_field))
 
 
 class CustomerUser(AbstractBaseUser, PermissionsMixin):

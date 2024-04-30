@@ -153,7 +153,7 @@ class LoginApi(APIView):
         if serializer.is_valid(raise_exception=True):
             try:
                 user = get_user_model().objects.get_user_with_mobile_or_mail(
-                    user_field=serializer.validated_data['email_mobile']
+                    user_field=serializer.validated_data['user_field']
                 )
                 if not user.check_password(serializer.validated_data['password']):
                     raise IncorrectUsernamePasswordException

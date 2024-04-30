@@ -280,12 +280,12 @@ class TestLoginUser(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response_json['status'])
         self.assertIn('Invalid input.', response_json['message'])
-        self.assertIn('email_mobile', response_json['data'])
+        self.assertIn('user_field', response_json['data'])
         self.assertIn('password', response_json['data'])
 
     def test_rejects_invalid_email(self):
         invalid_user_data = {
-            "email_mobile": "8590410@gmail.com",
+            "user_field": "8590410@gmail.com",
             "password": "123456"
         }
         response = self.client.post(
@@ -293,12 +293,12 @@ class TestLoginUser(TestCase):
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response_json['status'])
-        self.assertIn('Email/Mobile or password is incorrect', response_json['message'])
+        self.assertIn('Email/Mobile/Username or password is incorrect', response_json['message'])
         self.assertIn('login', response_json['code'])
 
     def test_rejects_invalid_password(self):
         invalid_user_data = {
-            "email_mobile": "mldtavakkoli@gmail.com",
+            "user_field": "mldtavakkoli@gmail.com",
             "password": "123456"
         }
         response = self.client.post(
@@ -306,12 +306,12 @@ class TestLoginUser(TestCase):
         response_json = response.json()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response_json['status'])
-        self.assertIn('Email/Mobile or password is incorrect', response_json['message'])
+        self.assertIn('Email/Mobile/Username or password is incorrect', response_json['message'])
         self.assertIn('login', response_json['code'])
 
     def test_successfully_login(self):
         valid_user_data = {
-            "email_mobile": self.user.email,
+            "user_field": self.user.email,
             "password": USER_VALID_DATA['password']
         }
         response = self.client.post(

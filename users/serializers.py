@@ -57,20 +57,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.ModelSerializer):
-    email_mobile = serializers.CharField(required=True, write_only=True)
+    user_field = serializers.CharField(required=True, write_only=True)
     password = serializers.CharField(required=True, write_only=True)
 
     @staticmethod
-    def validate_email_mobile(value):
+    def validate_user_field(value):
         if validate_email(value):
             return value
         if validate_mobile(value):
             return value
-        raise serializers.ValidationError(_('Invalid email/mobile format'))
+        raise serializers.ValidationError(_('Invalid format'))
 
     class Meta:
         model = get_user_model()
-        fields = ['email_mobile', 'password']
+        fields = ['user_field', 'password']
 
 
 class SendMobileOtpSerializer(serializers.ModelSerializer):
