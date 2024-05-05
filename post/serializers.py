@@ -5,6 +5,7 @@ from rest_framework_gis.serializers import GeoModelSerializer, GeometryField
 
 from albums.models import Media
 from albums.serializers import MediaSerializer
+from chat.models import ChatRoom
 from post.models import Post, Comment, Like, LikePost, Category, UserSeenPost
 from users.models import Address
 from users.serializers import UserSerializer, AddressSerializer, UserPublicSerializer
@@ -38,6 +39,12 @@ class RetrievePostSerializer(serializers.ModelSerializer):
     is_owner = serializers.SerializerMethodField('get_is_owner')
     category = CategorySerializer(many=True, read_only=True)
     is_seen = serializers.SerializerMethodField('set_is_seen')
+    common_chat = serializers.SerializerMethodField('get_common_chat_room')
+
+    def get_common_chat_room(self, obj):
+        chat_room = ChatRoom.objects.filter(type='direct', member=self.context['request'].user)
+        chat_room = chat_room.filter(member=obj.created_by).first()
+        return chat_room.room_id if chat_room else None
 
     def get_is_owner(self, obj):
         user = self.context['request'].user
@@ -51,7 +58,7 @@ class RetrievePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('id', 'address', 'title', 'created_by', 'body', 'media',
-                  'created_at', 'updated_at', 'is_owner', 'category', 'is_seen')
+                  'created_at', 'updated_at', 'is_owner', 'category', 'is_seen', 'common_chat')
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -130,11 +137,17 @@ class MyListPostSerializer(serializers.ModelSerializer):
 class PublicListPostSerializer(MyListPostSerializer):
     distance = serializers.IntegerField(read_only=True)
     is_seen = serializers.BooleanField(read_only=True)
+    common_chat = serializers.SerializerMethodField('get_common_chat_room')
+
+    def get_common_chat_room(self, obj):
+        chat_room = ChatRoom.objects.filter(type='direct', member=self.context['request'].user)
+        chat_room = chat_room.filter(member=obj.created_by).first()
+        return chat_room.room_id if chat_room else None
 
     class Meta:
         model = Post
         fields = ('id', 'created_by', 'address', 'body', 'title', 'media', 'distance', 'likes', 'user_liked',
-                  'category', 'is_seen')
+                  'category', 'is_seen', 'common_chat')
 
 
 class ListCountLocationPostsSerializer(GeoModelSerializer):

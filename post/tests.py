@@ -9,6 +9,7 @@ from rest_framework.reverse import reverse
 
 from NeighborsHub.test_function import test_object_attributes_existence
 from albums.models import Media
+from chat.models import ChatRoom
 from core.models import Hashtag
 from post.models import Post, PostHashtag, Comment, CommentHashtag, LikePost, LikeComment, Category, UserSeenPost
 from users.models import Address, CustomerUser
@@ -117,7 +118,7 @@ class TestMyListPost(TestCase):
         # dummy_user = baker.make(CustomerUser)
         # baker.make(Post, created_by=dummy_user, _quantity=10)
         post = baker.make(Post, created_by=self.user, _quantity=1)
-        baker.make(LikePost, post=post[0], created_by=self.user,type='like')
+        baker.make(LikePost, post=post[0], created_by=self.user, type='like')
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('user_post_list'), data={}, format='json')
         response_json = response.json()
@@ -195,7 +196,8 @@ class TestListPost(TestCase):
         post_address = baker.make(Address, location=Point(40.5432, -75.5673), )
         dummy_address = baker.make(Address, location=Point(41.5435, -79.5680), )
         medias = baker.make(Media, 5)
-        posts = baker.make(Post, address=post_address, media=medias, _quantity=2, body="#hello_world")
+        posts = baker.make(Post, address=post_address, media=medias, _quantity=2, body="#hello_world",
+                           created_by=self.user)
         category = baker.make(Category, title='testing', internal_code='test')
         posts[0].category.add(category)
         posts[1].category.add(category)
@@ -262,6 +264,7 @@ class TestListPost(TestCase):
         self.assertIn('title', response_json['data']['posts']['results'][0]['category'][0])
         self.assertIn('id', response_json['data']['posts']['results'][0]['category'][0])
         self.assertIn('test', response_json['data']['posts']['results'][0]['category'][0]['internal_code'])
+        self.assertIn('common_chat', response_json['data']['posts']['results'][0])
 
     def test_successful_in_bbox(self):
         params = {
@@ -289,7 +292,17 @@ class TestListPost(TestCase):
         self.assertEqual(UserSeenPost.objects.filter(user=self.user).count(),
                          len(response.json()['data']['posts']['results']))
 
+    def test_common_chat_room(self):
+        chat_room = baker.make(ChatRoom, type='direct')
+        chat_room.member.add(self.user)
+        chat_room.member.add(self.dummy_user)
+        params = {'hashtag_title': 'hello_world'}
 
+        self.client.force_authenticate(self.dummy_user)
+        response = self.client.get(reverse('post_list'), data=params)
+        response_json = response.json()
+        self.assertIn('common_chat', response_json['data']['posts']['results'][0])
+        self.assertEqual(chat_room.room_id, response_json['data']['posts']['results'][0]['common_chat'])
 
 class TestListCountLocationPost(TestCase):
     def setUp(self) -> None:
@@ -451,6 +464,18 @@ class TestRetrievePost(TestCase):
         self.assertIn('is_seen', response_json['data']['post'])
         self.assertIn('first_seen', response_json['data']['post']['is_seen'])
         self.assertIn('last_seen', response_json['data']['post']['is_seen'])
+        
+    def test_common_chat_room(self):
+        chat_room = baker.make(ChatRoom, type='direct')
+        chat_room.member.add(self.user)
+        chat_room.member.add(self.other_user)
+
+        self.client.force_authenticate(self.other_user)
+        response = self.client.get(reverse('post_retrieve', kwargs={'post_pk': self.post.id}))
+        response_json = response.json()
+        self.assertIn('common_chat',  response_json['data']['post'])
+        self.assertEqual(chat_room.room_id,  response_json['data']['post']['common_chat'])
+
 
 
 class TestUpdateRetrieveDeleteComment(TestCase):
