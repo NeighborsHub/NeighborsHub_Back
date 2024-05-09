@@ -5,38 +5,6 @@ from .models import ChatRoom, ChatMessage
 from users.serializers import UserSerializer
 
 
-class ChatRoomSerializer(serializers.ModelSerializer):
-    type = serializers.ChoiceField(required=True, choices=ChatRoom.CHAT_ROOM_CHOICES)
-    members = serializers.ListField(write_only=True, min_length=1)
-
-    def validate(self, attrs):
-        if attrs.get('type') == 'direct' and len(attrs.get('members')) > 1:
-            raise serializers.ValidationError({'members': 'In direct message can`t be more than one member'})
-
-        attrs.get('members').append({"id": self.context['request'].user.id})
-        members = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('members')]
-
-        if attrs.get('type') == 'direct' and ChatRoom.objects.filter(type=attrs.get('type'),
-                                                                     member__in=[m.id for m in members]).exists():
-            raise serializers.ValidationError({'members': 'You have already Direct Message for This person'})
-
-        attrs['members'] = members
-        return attrs
-
-    def create(self, validated_data):
-        members = validated_data.pop('members')
-        # members.append({"id": self.context['request'].user.id})
-        chat_rooms = ChatRoom.objects.create(**validated_data)
-        chat_rooms.member.set(members)
-        if self.validated_data['type'] != 'direct':
-            chat_rooms.admin.set([self.context.get('request').user])
-        return chat_rooms
-
-    class Meta:
-        model = ChatRoom
-        exclude = ['id', 'member', 'admin', ]
-
-
 class ChatRoomMembersSerializer(serializers.ModelSerializer):
     member = UserSerializer(many=True, read_only=True)
     admin = UserSerializer(many=True, read_only=True)
@@ -121,3 +89,48 @@ class RemoveChatMessageSerializer(serializers.Serializer):
     delete_my_messages_for_all = serializers.BooleanField(default=False, required=False)
     delete_all_message_for_me = serializers.BooleanField(default=True, required=False)
     message_ids = serializers.ListField(required=True, child=IDFieldSerializer(required=True), min_length=1)
+
+
+class ChatRoomSerializer(serializers.ModelSerializer):
+    type = serializers.ChoiceField(required=True, choices=ChatRoom.CHAT_ROOM_CHOICES)
+    members = serializers.ListField(write_only=True, min_length=1)
+    last_message = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField('get_name')
+
+    def get_name(self, obj):
+        if obj.type == 'direct':
+            member = obj.member.all().exclude(id=self.context['request'].user.id).last()
+            return f'{member.first_name} {member.last_name}'
+        return obj.name
+
+    def get_last_message(self, obj):
+        message = obj.messages.order_by('-id').exclude(deleted_by=self.context['request'].user).first()
+        return ChatMessageSerializer(message, many=False, context=self.context).data if message else None
+
+    def validate(self, attrs):
+        if attrs.get('type') == 'direct' and len(attrs.get('members')) > 1:
+            raise serializers.ValidationError({'members': 'In direct message can`t be more than one member'})
+
+        attrs.get('members').append({"id": self.context['request'].user.id})
+        members = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('members')]
+
+        if attrs.get('type') == 'direct' and ChatRoom.objects.filter(type=attrs.get('type'),
+                                                                     member__in=[m.id for m in members]).exists():
+            raise serializers.ValidationError({'members': 'You have already Direct Message for This person'})
+
+        attrs['members'] = members
+        return attrs
+
+    def create(self, validated_data):
+        members = validated_data.pop('members')
+        # members.append({"id": self.context['request'].user.id})
+        chat_rooms = ChatRoom.objects.create(**validated_data)
+        chat_rooms.member.set(members)
+        if self.validated_data['type'] != 'direct':
+            chat_rooms.admin.set([self.context.get('request').user])
+        return chat_rooms
+
+    class Meta:
+        model = ChatRoom
+        exclude = ['id', 'member', 'admin', ]
+

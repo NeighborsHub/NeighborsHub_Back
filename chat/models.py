@@ -24,7 +24,7 @@ class ChatRoom(models.Model):
 
 
 class ChatMessage(models.Model):
-    chat = models.ForeignKey(ChatRoom, on_delete=models.SET_NULL, null=True)
+    chat = models.ForeignKey(ChatRoom, on_delete=models.SET_NULL, null=True, related_name='messages',)
     user = models.ForeignKey(CustomerUser, on_delete=models.SET_NULL, null=True)
     message = models.CharField(max_length=255)
     reply_to = models.ForeignKey('self', on_delete=models.SET_NULL, null=True)

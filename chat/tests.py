@@ -92,6 +92,59 @@ class TestCreateDirectMessage(TestCase):
         self.assertIn('room_id', response_json['data'])
 
 
+class TsetChatMessageModel(TestCase):
+    @staticmethod
+    def test_property_type_model_exists():
+        ChatMessage()
+
+    def test_property_type_model_has_all_required_attributes(self):
+        attributes = [
+            'chat_id', 'message', 'user_id', 'post_id', 'reply_to_id',
+            'updated_at', 'deleted_by', 'created_at'
+        ]
+        chat_message = ChatMessage
+        test_object_attributes_existence(self, chat_message, attributes)
+
+    def test_successfully_create(self):
+        created_obj = baker.make(ChatMessage)
+        test_obj = ChatMessage.objects.filter(id=created_obj.id).first()
+        self.assertIsNotNone(test_obj)
+
+
+class TestListUserChatRoom(TestCase):
+    def setUp(self) -> None:
+        self.client = APIClient()
+        self.user = _create_user()
+        self.dummy_user = baker.make(CustomerUser, first_name='John', last_name='Doe')
+        self.ch_1 = baker.make(ChatRoom, type='direct')
+        self.ch_1.member.add(self.dummy_user)
+        self.ch_1.member.add(self.user)
+        self.message = baker.make(ChatMessage, chat=self.ch_1, user=self.dummy_user, message='Hello Milad')
+
+    def test_api_exists_forbidden_anonymous(self):
+        response = self.client.get(reverse('chatRoom'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_user_chat_rooms(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('chatRoom'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = response.json()
+        self.assertEqual('direct', response_json['data'][0]['type'])
+        self.assertEqual('John Doe', response_json['data'][0]['name'])
+        self.assertIn('last_message', response_json['data'][0])
+        self.assertIn('room_id', response_json['data'][0])
+
+    def test_last_message_not_show_deleted(self):
+        self.message.deleted_by.add(self.user)
+        self.client.force_authenticate(self.user)
+        response = self.client.get(reverse('chatRoom'), data={}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_json = response.json()
+        self.assertIn('last_message', response_json['data'][0])
+        self.assertIsNone(response_json['data'][0]['last_message'])
+
+
 class TestChatRoomMemberListMessage(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
