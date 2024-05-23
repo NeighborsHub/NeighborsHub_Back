@@ -62,11 +62,7 @@ class LoginSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def validate_user_field(value):
-        if validate_email(value):
-            return value
-        if validate_mobile(value):
-            return value
-        raise serializers.ValidationError(_('Invalid format'))
+        return value
 
     class Meta:
         model = get_user_model()
