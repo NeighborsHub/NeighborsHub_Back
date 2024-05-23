@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from albums.serializers import UserAvatarSerializer
 from users.models import CustomerUser
 from .models import ChatRoom, ChatMessage, UserSeenMessage
 from users.serializers import UserSerializer
@@ -138,8 +139,9 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     def get_avatar(self, obj):
         if obj.type == 'direct':
             member = obj.member.all().exclude(id=self.context['request'].user.id).last()
-            return member.avatar_url if member.avatar_url else ''
-        return obj.name
+            qs = member.get_avatar()
+            return UserAvatarSerializer(instance=qs, many=False, context=self.context).data
+        return ''
 
     def get_last_message(self, obj):
         message = obj.messages.order_by('-id').exclude(deleted_by=self.context['request'].user).first()
@@ -152,9 +154,10 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         attrs.get('members').append({"id": self.context['request'].user.id})
         members = [CustomerUser.objects.get(**user_data) for user_data in attrs.get('members')]
 
-        if attrs.get('type') == 'direct' and ChatRoom.objects.filter(type=attrs.get('type'),
-                                                                     member__in=[m.id for m in members]).exists():
-            raise serializers.ValidationError({'members': 'You have already Direct Message for This person'})
+        if attrs.get('type') == 'direct':
+            chat_room = ChatRoom.objects.filter(type=attrs.get('type'),member=members[0]).filter(member=members[1])
+            if chat_room.exists():
+                raise serializers.ValidationError({'members': 'You have already Direct Message for This person'})
 
         attrs['members'] = members
         return attrs

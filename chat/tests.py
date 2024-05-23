@@ -60,7 +60,6 @@ class TestCreateDirectMessage(TestCase):
     def test_create_direct_chatroom(self):
         self.client.force_authenticate(self.user)
         tmp_user = baker.make(CustomerUser)
-        tmp_user_2 = baker.make(CustomerUser)
         data = {
             'type': 'direct',
             'members': [{'id': tmp_user.id}],
