@@ -49,16 +49,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return {
             'id': chat_message_obj.id,
             'action': 'message',
-            'replyId': reply_to,
-            'postId': post_id,
+            'reply_id': reply_to,
+            'post_id': post_id,
             'user': user_obj.id,
-            'roomId': chat_obj.room_id,
+            'room_id': chat_obj.room_id,
             'message': message,
-            'userImage': {
+            'user_image': {
                 'thumbnail': user_avatar.avatar_thumbnail.url if user_avatar else None,
             },
-            'userName': user_obj.first_name + " " + user_obj.last_name,
-            'timestamp': str(chat_message_obj.created_at)
+            'user_name': user_obj.first_name + " " + user_obj.last_name,
+            'created_at': str(chat_message_obj.created_at)
         }
 
     async def send_online_user_list(self):
@@ -67,7 +67,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'type': 'chat_message',
             'message': {
                 'action': 'onlineUser',
-                'userList': online_user_list
+                'user_list': online_user_list
             }
         }
         await self.channel_layer.group_send('onlineUser', chat_messages)
@@ -102,15 +102,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         action = text_data_json['action']
-        room_id = text_data_json['roomId']
+        room_id = text_data_json['room_id']
         chat_obj = await database_sync_to_async(self.get_chat_room)(room_id, self.user)
         if chat_obj is None:
             return {'error': 'Room not found'}
         chat_message = {}
         if action == 'message':
             message = text_data_json['message']
-            reply_to_id = text_data_json.get('replyId')
-            post_id = text_data_json.get('postId')
+            reply_to_id = text_data_json.get('reply_id')
+            post_id = text_data_json.get('post_id')
             chat_message = await database_sync_to_async(
                 self.save_message
             )(message, chat_obj, reply_to_id, post_id)
