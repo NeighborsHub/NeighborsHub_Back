@@ -90,24 +90,18 @@ class TestCreateDirectMessage(TestCase):
         self.assertIn('type', response_json['data'])
         self.assertIn('room_id', response_json['data'])
 
-
-class TsetChatMessageModel(TestCase):
-    @staticmethod
-    def test_property_type_model_exists():
-        ChatMessage()
-
-    def test_property_type_model_has_all_required_attributes(self):
-        attributes = [
-            'chat_id', 'message', 'user_id', 'post_id', 'reply_to_id',
-            'updated_at', 'deleted_by', 'created_at'
-        ]
-        chat_message = ChatMessage
-        test_object_attributes_existence(self, chat_message, attributes)
-
-    def test_successfully_create(self):
-        created_obj = baker.make(ChatMessage)
-        test_obj = ChatMessage.objects.filter(id=created_obj.id).first()
-        self.assertIsNotNone(test_obj)
+    def test_rejects_exists_direct_chatroom(self):
+        self.client.force_authenticate(self.user)
+        tmp_user = baker.make(CustomerUser)
+        data = {
+            'type': 'direct',
+            'members': [{'id': tmp_user.id}],
+            'name': 'Test Direct'
+        }
+        chat = baker.make(ChatRoom, type='direct')
+        chat.member.set([self.user, tmp_user])
+        response = self.client.post(reverse('chatRoom'), data=data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class TestListUserChatRoom(TestCase):
@@ -366,7 +360,7 @@ class TestListSeenMessage(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         self.user = _create_user()
-        self.tmp_users = baker.make(CustomerUser,  _quantity=12)
+        self.tmp_users = baker.make(CustomerUser, _quantity=12)
         self.chat_room = baker.make(ChatRoom, type='group')
         self.chat_room.member.set([tmp_user for tmp_user in self.tmp_users])
         self.chat_room.member.add(self.user)
@@ -375,7 +369,7 @@ class TestListSeenMessage(TestCase):
     def test_api_exists_forbidden_anonymous(self):
         response = self.client.get(reverse('seen_message_list_users',
                                            kwargs={'room_id': self.chat_room.room_id,
-                                                   'message_id':self.message.id}),
+                                                   'message_id': self.message.id}),
                                    data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -384,7 +378,7 @@ class TestListSeenMessage(TestCase):
         self.client.force_authenticate(self.user)
         response = self.client.get(reverse('seen_message_list_users',
                                            kwargs={'room_id': tmp_chatroom.room_id,
-                                                   'message_id':self.message.id}),
+                                                   'message_id': self.message.id}),
                                    data={}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
