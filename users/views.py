@@ -498,7 +498,7 @@ class UpdateUserNameAPI(APIView):
         user = self.request.user
         serializer = UpdateUsernameSerializer(data=request.data,  context={"request": request})
         serializer.is_valid(raise_exception=True)
-        return Response(data={"status": "ok", "message": _("It's ok! "), 'data': {}})
+        return Response(data={"status": "ok", "message": _("It's ok! "), 'data': {'is_available': True}})
 
 
 class VerifySendOTPUpdateMobile(APIView):
