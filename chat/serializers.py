@@ -73,14 +73,15 @@ class UserSeenMessageSerializer(serializers.ModelSerializer):
         return f'{obj.user.first_name if obj.user.first_name else ''} {obj.user.last_name if obj.user.last_name else ''}'
 
     def create(self, validated_data):
-        messages = ChatMessage.objects.filter(chat__room_id=self.context['request'].parser_context['kwargs'].get('room_id'),
-                                              chat__member=self.context['request'].user,
-                                              id__in=validated_data.get('messages_id'))
+        messages = ChatMessage.objects.filter(
+            chat__room_id=self.context['request'].parser_context['kwargs'].get('room_id'),
+            chat__member=self.context['request'].user,
+            id__in=validated_data.get('messages_id'))
         messages = messages.exclude(user_id=self.context['request'].user.id)
         seen_obj = [
             UserSeenMessage(message=msg, user=self.context['request'].user) for msg in messages
         ]
-        
+
         return UserSeenMessage.objects.bulk_create(seen_obj)
 
     class Meta:
@@ -103,7 +104,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_user_name(obj):
-        return f'{obj.user.first_name if obj.user.first_name else '' } {obj.user.last_name if obj.user.last_name else ''}'
+        return f'{obj.user.first_name if obj.user.first_name else ''} {obj.user.last_name if obj.user.last_name else ''}'
 
 
 class IDFieldSerializer(serializers.Serializer):
@@ -126,11 +127,18 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     members = serializers.ListField(write_only=True, min_length=1)
     last_message = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField('get_name')
+    avatar = serializers.SerializerMethodField('get_avatar')
 
     def get_name(self, obj):
         if obj.type == 'direct':
             member = obj.member.all().exclude(id=self.context['request'].user.id).last()
             return f'{member.first_name} {member.last_name}'
+        return obj.name
+
+    def get_avatar(self, obj):
+        if obj.type == 'direct':
+            member = obj.member.all().exclude(id=self.context['request'].user.id).last()
+            return member.avatar_url if member.avatar_url else ''
         return obj.name
 
     def get_last_message(self, obj):
@@ -163,4 +171,3 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChatRoom
         exclude = ['id', 'member', 'admin', ]
-
