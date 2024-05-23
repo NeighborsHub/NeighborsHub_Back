@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from users.models import CustomerUser
-from .models import ChatRoom, ChatMessage
+from .models import ChatRoom, ChatMessage, UserSeenMessage
 from users.serializers import UserSerializer
 
 
@@ -63,17 +63,47 @@ class ChatRoomMembersSerializer(serializers.ModelSerializer):
         fields = ['members', 'member', 'admins', 'admin', 'delete_members', 'delete_admins']
 
 
+class UserSeenMessageSerializer(serializers.ModelSerializer):
+    messages_id = serializers.ListField(write_only=True, min_length=1)
+    user_name = serializers.SerializerMethodField(read_only=True)
+    user_avatar = serializers.ImageField(source='user.avatar', read_only=True)
+
+    @staticmethod
+    def get_user_name(obj):
+        return f'{obj.user.first_name if obj.user.first_name else ''} {obj.user.last_name if obj.user.last_name else ''}'
+
+    def create(self, validated_data):
+        messages = ChatMessage.objects.filter(chat__room_id=self.context['request'].parser_context['kwargs'].get('room_id'),
+                                              chat__member=self.context['request'].user,
+                                              id__in=validated_data.get('messages_id'))
+        messages = messages.exclude(user_id=self.context['request'].user.id)
+        seen_obj = [
+            UserSeenMessage(message=msg, user=self.context['request'].user) for msg in messages
+        ]
+        
+        return UserSeenMessage.objects.bulk_create(seen_obj)
+
+    class Meta:
+        model = UserSeenMessage
+        fields = ['messages_id', 'created_at', 'user_name', 'user_avatar']
+
+
 class ChatMessageSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     user_avatar = serializers.ImageField(source='user.avatar')
+    is_seen = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatMessage
         exclude = ['chat', 'deleted_by']
 
     @staticmethod
+    def get_is_seen(obj):
+        return obj.seen.exists()
+
+    @staticmethod
     def get_user_name(obj):
-        return obj.user.first_name + ' ' + obj.user.last_name
+        return f'{obj.user.first_name if obj.user.first_name else '' } {obj.user.last_name if obj.user.last_name else ''}'
 
 
 class IDFieldSerializer(serializers.Serializer):

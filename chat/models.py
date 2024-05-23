@@ -1,6 +1,7 @@
 from django.db import models
 from users.models import CustomerUser
 from shortuuidfield import ShortUUIDField
+from django.utils.translation import gettext as _
 
 
 # Create your models here.
@@ -34,5 +35,18 @@ class ChatMessage(models.Model):
 
     deleted_by = models.ManyToManyField(CustomerUser, related_name='deleted_by', blank=True)
 
+    seen = models.ManyToManyField(CustomerUser, through='UserSeenMessage',
+                                  related_name='user_seen_messages', blank=True)
+
     def __str__(self):
         return self.message
+
+
+class UserSeenMessage(models.Model):
+    user = models.ForeignKey('users.CustomerUser', on_delete=models.CASCADE, related_name='seen_messages',
+                             verbose_name=_('user'))
+    message = models.ForeignKey(ChatMessage, on_delete=models.CASCADE, related_name='user_seen_message')
+    created_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'message')

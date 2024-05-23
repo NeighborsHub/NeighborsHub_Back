@@ -1,16 +1,18 @@
+from django.core.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
-from rest_framework.generics import ListAPIView, UpdateAPIView, DestroyAPIView
+from rest_framework.generics import ListAPIView, UpdateAPIView, DestroyAPIView, CreateAPIView
 from rest_framework.pagination import LimitOffsetPagination
 
-from NeighborsHub.custom_view_mixin import ExpressiveListModelMixin, ExpressiveUpdateModelMixin
+from NeighborsHub.custom_view_mixin import ExpressiveListModelMixin, ExpressiveUpdateModelMixin, \
+    ExpressiveCreateModelMixin
 from NeighborsHub.exceptions import YouAreNotGroupAdminException
 from NeighborsHub.permission import CustomAuthentication
 from users.models import CustomerUser
 from .serializers import ChatRoomSerializer, ChatMessageSerializer, ChatRoomMembersSerializer, \
-    RemoveChatMessageSerializer, LeaveChatRoomSerializer
-from .models import ChatRoom, ChatMessage
+    RemoveChatMessageSerializer, LeaveChatRoomSerializer, UserSeenMessageSerializer
+from .models import ChatRoom, ChatMessage, UserSeenMessage
 from django.utils.translation import gettext as _
 
 
@@ -70,6 +72,8 @@ class MessagesView(ExpressiveListModelMixin, ListAPIView):
     plural_name = 'chat_messages'
 
     def get_queryset(self):
+        if not ChatRoom.objects.filter(room_id=self.kwargs['room_id'], member=self.request.user).exists():
+            raise PermissionDenied()
         chats = ChatMessage.objects.filter(chat__room_id=self.kwargs['room_id'])
         chats = chats.exclude(deleted_by=self.request.user).order_by('-created_at')
         return chats
@@ -155,3 +159,36 @@ class DeleteChatMessagesAPI(DestroyAPIView):
         self.perform_destroy(instance)
         return Response({"status": "ok", 'data': {}, 'message': _('Messages deleted successfully.')},
                         status=status.HTTP_204_NO_CONTENT)
+
+
+class CreateUserSeenMessagesAPI(ExpressiveCreateModelMixin, CreateAPIView):
+    authentication_classes = (CustomAuthentication,)
+    serializer_class = UserSeenMessageSerializer
+    singular_name = 'seen_messages'
+
+    def create(self, request, *args, **kwargs):
+        if not ChatRoom.objects.filter(room_id=self.kwargs.get('room_id'),
+                                       member=self.request.user).exists():
+            raise PermissionDenied()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response({"status": "ok", 'data': {}, 'message': _('Messages seen successfully')},
+                        status=status.HTTP_200_OK)
+
+
+class ListUserSeenMessagesAPI(ExpressiveListModelMixin, ListAPIView):
+    authentication_classes = (CustomAuthentication,)
+    serializer_class = UserSeenMessageSerializer
+    plural_name = 'user_seen_messages'
+
+    def get_queryset(self):
+        if not ChatRoom.objects.filter(room_id=self.kwargs.get('room_id'),
+                                       member=self.request.user).exists():
+            raise PermissionDenied()
+        message = ChatMessage.objects.filter(chat__room_id=self.kwargs.get('room_id'), user=self.request.user,
+                                             id=self.kwargs.get('message_id')).first()
+        if not message:
+            raise PermissionDenied()
+
+        return message.user_seen_message.all()
