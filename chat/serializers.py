@@ -71,7 +71,7 @@ class UserSeenMessageSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_user_name(obj):
-        return f'{obj.user.first_name if obj.user.first_name else ''} {obj.user.last_name if obj.user.last_name else ''}'
+        return f'{obj.user.first_name if obj.user.first_name else ""} {obj.user.last_name if obj.user.last_name else ""}'
 
     def create(self, validated_data):
         messages = ChatMessage.objects.filter(
@@ -105,7 +105,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_user_name(obj):
-        return f'{obj.user.first_name if obj.user.first_name else ''} {obj.user.last_name if obj.user.last_name else ''}'
+        return f'{obj.user.first_name if obj.user.first_name else ""} {obj.user.last_name if obj.user.last_name else ""}'
 
 
 class IDFieldSerializer(serializers.Serializer):
